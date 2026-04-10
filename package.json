@@ -1,0 +1,28 @@
+{
+  "name": "techbros-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @techbros/api run dev",
+    "build": "pnpm --filter @techbros/api run build",
+    "start": "pnpm --filter @techbros/api run start",
+    "typecheck": "pnpm --filter @techbros/api run typecheck",
+    "test": "pnpm --filter @techbros/api run test",
+    "test:watch": "pnpm --filter @techbros/api run test:watch",
+    "lint": "eslint apps/api --max-warnings=0",
+    "lint:fix": "eslint apps/api --fix --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=10 <11"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.2.0",
+    "globals": "17.4.0",
+    "prettier": "3.8.2",
+    "typescript-eslint": "8.58.1"
+  }
+}

@@ -40,7 +40,7 @@ Testcontainers.
 - `tests/integration/db-config.integration.test.ts`
   - pool sizing defaults and overrides
   - readiness client connection/query timeout wiring
-- `tests/integration/validate-request.integration.test.ts`
+- `tests/integration/validated-route.integration.test.ts`
   - params, query, and body validation
   - aggregated validation errors
   - parsed input passed to the `route(...)` handler

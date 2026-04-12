@@ -1,8 +1,9 @@
 # Techbros Workspace
 
-Minimal `pnpm` workspace for the Techbros backend platform. The active app is
-[`apps/api`](./apps/api), an Express + TypeScript REST API. [`apps/web`](./apps/web)
-and [`packages/shared`](./packages/shared) exist as placeholders and are not active yet.
+Minimal `pnpm` workspace for the Techbros platform. The active apps are
+[`apps/api`](./apps/api), an Express + TypeScript REST API, and
+[`apps/web`](./apps/web), a React + TypeScript Vite frontend. [`packages/shared`](./packages/shared)
+remains reserved for future shared packages.
 
 ## Prerequisites
 
@@ -20,7 +21,13 @@ pnpm --filter @techbros/api run db:migrate
 pnpm dev
 ```
 
-The API listens on port `3000` by default.
+`pnpm dev` starts both apps. The API listens on port `3000` by default, and the
+web app listens on port `5173`.
+
+In local development, the Vite dev server proxies `/api`, `/health`, and
+`/ready` from the web origin to the API. When `pnpm dev` is running, the web
+app can call `/api/v1/status`, `/health`, and `/ready` through
+`http://localhost:5173`.
 
 `apps/api/.env.example` includes the optional runtime settings for:
 
@@ -32,21 +39,29 @@ The API listens on port `3000` by default.
 
 Run these from the repo root.
 
-| Command             | Purpose                                  |
-| ------------------- | ---------------------------------------- |
-| `pnpm dev`          | Start the API in watch mode              |
-| `pnpm build`        | Compile the API to `dist/`               |
-| `pnpm start`        | Run the compiled API                     |
-| `pnpm typecheck`    | Run the API TypeScript check             |
-| `pnpm lint`         | Run ESLint for `apps/api`                |
-| `pnpm format`       | Format the repo with Prettier            |
-| `pnpm format:check` | Check formatting without rewriting files |
-| `pnpm test`         | Run the API test suite                   |
+| Command              | Purpose                                   |
+| -------------------- | ----------------------------------------- |
+| `pnpm dev`           | Start the API and web app together        |
+| `pnpm dev:api`       | Start only the API in watch mode          |
+| `pnpm dev:web`       | Start only the web app in dev mode        |
+| `pnpm build`         | Build both active apps                    |
+| `pnpm build:api`     | Compile the API to `dist/`                |
+| `pnpm build:web`     | Build the web app for production          |
+| `pnpm start`         | Run the compiled API                      |
+| `pnpm typecheck`     | Run TypeScript checks for both apps       |
+| `pnpm typecheck:api` | Run the API TypeScript check              |
+| `pnpm typecheck:web` | Run the web app TypeScript check          |
+| `pnpm lint`          | Run ESLint for both active apps           |
+| `pnpm lint:fix`      | Run ESLint autofixes for both active apps |
+| `pnpm preview:web`   | Preview the web production build          |
+| `pnpm format`        | Format the repo with Prettier             |
+| `pnpm format:check`  | Check formatting without rewriting files  |
+| `pnpm test`          | Run the API test suite                    |
 
 ## Repo Structure
 
 - [`apps/api`](./apps/api): active Express API
-- [`apps/web`](./apps/web): reserved for a future web app
+- [`apps/web`](./apps/web): active React + Vite web app
 - [`packages/shared`](./packages/shared): reserved for future shared packages
 
 ## Operational Endpoints

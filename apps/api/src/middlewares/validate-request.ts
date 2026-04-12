@@ -81,19 +81,6 @@ const parseRequestInput = async <Schemas extends RequestValidationSchemas>(
   ) as ValidatedInput<Schemas>;
 };
 
-export const validateRequest = <Schemas extends RequestValidationSchemas>(
-  schemas: Schemas,
-): RequestHandler => {
-  return async (req, _res, next) => {
-    try {
-      await parseRequestInput(schemas, req);
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-};
-
 export const route = <Schemas extends RequestValidationSchemas>(
   schemas: Schemas,
   handler: ValidatedRouteHandler<Schemas>,

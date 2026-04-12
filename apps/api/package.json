@@ -11,6 +11,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests/tsconfig.json",
+    "lint": "pnpm --dir ../.. exec eslint apps/api --max-warnings=0",
+    "lint:fix": "pnpm --dir ../.. exec eslint apps/api --fix --max-warnings=0",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:up": "docker compose -f ../../docker-compose.yml up -d postgres",

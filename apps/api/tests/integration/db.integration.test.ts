@@ -40,7 +40,7 @@ describe("database integration", () => {
   });
 
   beforeEach(async () => {
-    await truncateTables(pool, ["users"]);
+    await truncateTables(pool, ["users", "tenants"]);
   });
 
   afterAll(async () => {
@@ -69,16 +69,23 @@ describe("database integration", () => {
   });
 
   it("enforces the unique email constraint", async () => {
-    await pool.query("insert into users (id, email) values ($1, $2)", [
-      randomUUID(),
-      "hello@techbros.test",
-    ]);
+    const tenantId = randomUUID();
+
+    await pool.query(
+      "insert into tenants (id, slug, name) values ($1, $2, $3)",
+      [tenantId, "tenant-alpha", "Tenant Alpha"],
+    );
+
+    await pool.query(
+      "insert into users (id, tenant_id, email, password_hash) values ($1, $2, $3, $4)",
+      [randomUUID(), tenantId, "hello@techbros.test", "password-hash"],
+    );
 
     await expect(
-      pool.query("insert into users (id, email) values ($1, $2)", [
-        randomUUID(),
-        "hello@techbros.test",
-      ]),
+      pool.query(
+        "insert into users (id, tenant_id, email, password_hash) values ($1, $2, $3, $4)",
+        [randomUUID(), tenantId, "hello@techbros.test", "password-hash"],
+      ),
     ).rejects.toMatchObject({
       code: "23505",
     });

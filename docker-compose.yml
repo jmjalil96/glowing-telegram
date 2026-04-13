@@ -14,6 +14,11 @@ services:
       retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
+  inbucket:
+    image: inbucket/inbucket:latest
+    ports:
+      - "2500:2500"
+      - "9000:9000"
 
 volumes:
   postgres_data:

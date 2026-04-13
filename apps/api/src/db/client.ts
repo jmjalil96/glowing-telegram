@@ -2,7 +2,19 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Client, Pool } from "pg";
 
 import { env } from "../config/env.js";
-import { usersTable } from "./schema/users.js";
+import { auditLogsTable } from "./schema/audit.js";
+import {
+  sessionsTable,
+  tenantsTable,
+  userTokensTable,
+  usersTable,
+} from "./schema/auth.js";
+import {
+  permissionsTable,
+  rolePermissionsTable,
+  rolesTable,
+  userRolesTable,
+} from "./schema/rbac.js";
 
 const READINESS_QUERY_TIMEOUT_MS = 1_000;
 
@@ -18,6 +30,14 @@ export const pool = new Pool(poolConfig);
 export const db = drizzle({
   client: pool,
   schema: {
+    auditLogsTable,
+    permissionsTable,
+    rolePermissionsTable,
+    rolesTable,
+    sessionsTable,
+    tenantsTable,
+    userTokensTable,
+    userRolesTable,
     usersTable,
   },
 });

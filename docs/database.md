@@ -1,17 +1,21 @@
 # Database Workflow
 
 The API uses PostgreSQL `17` in Docker Compose, `pg` for connectivity, and
-Drizzle for schema and migrations.
+Drizzle for schema and migrations. The same Docker Compose stack also includes
+Inbucket for local SMTP testing.
 
 ## Local Postgres Contract
 
-`docker-compose.yml` defines a single database service:
+`docker-compose.yml` defines the local persistence and mail-testing services:
 
 - service: `postgres`
 - database: `techbros_api`
 - user: `postgres`
 - password: `postgres`
 - port: `5432`
+- service: `inbucket`
+- SMTP port: `2500`
+- web UI: `http://localhost:9000`
 
 The API reads its database connection from `apps/api/.env` through
 `DATABASE_URL`.
@@ -45,7 +49,7 @@ pnpm --filter @techbros/api run db:studio
 
 ## Normal Flow
 
-Start PostgreSQL:
+Start PostgreSQL and Inbucket:
 
 ```sh
 pnpm --filter @techbros/api run db:up
@@ -75,7 +79,7 @@ Open Drizzle Studio when needed:
 pnpm --filter @techbros/api run db:studio
 ```
 
-Stop PostgreSQL:
+Stop the local Docker services:
 
 ```sh
 pnpm --filter @techbros/api run db:down

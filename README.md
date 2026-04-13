@@ -24,6 +24,10 @@ pnpm dev
 `pnpm dev` starts both apps. The API listens on port `3000` by default, and the
 web app listens on port `5173`.
 
+`pnpm --filter @techbros/api run db:up` also starts Inbucket for local email
+testing. The SMTP listener is available at `127.0.0.1:2500`, and the Inbucket
+web UI is available at `http://localhost:9000`.
+
 In local development, the Vite dev server proxies `/api`, `/health`, and
 `/ready` from the web origin to the API. When `pnpm dev` is running, the web
 app can call `/api/v1/status`, `/health`, and `/ready` through
@@ -32,8 +36,18 @@ app can call `/api/v1/status`, `/health`, and `/ready` through
 `apps/api/.env.example` includes the optional runtime settings for:
 
 - `CORS_ALLOWED_ORIGINS` for credentialed browser CORS allowlisting
+- `WEB_APP_URL` for frontend-facing auth URLs such as password reset links
 - `LOG_LEVEL` for overriding the default `debug`/`info` environment behavior
 - `PG_POOL_MAX`, `PG_IDLE_TIMEOUT_MS`, and `PG_CONNECT_TIMEOUT_MS` for pool sizing and fail-fast connectivity
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`,
+  `EMAIL_FROM`, and `EMAIL_REPLY_TO` for SMTP delivery
+
+If `SMTP_HOST` is left unset in `development` or `test`, the API defaults to
+Inbucket on `127.0.0.1:2500` and uses `no-reply@techbros.local` as the default
+sender address.
+
+If `WEB_APP_URL` is left unset in `development` or `test`, the API defaults to
+`http://localhost:5173`. In `production`, it must be configured explicitly.
 
 ## Commands
 

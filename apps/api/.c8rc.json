@@ -1,0 +1,14 @@
+{
+  "all": true,
+  "clean": true,
+  "exclude-after-remap": true,
+  "src": ["src"],
+  "exclude": [
+    "tests/**",
+    "src/db/migrate.ts",
+    "src/db/seed.ts",
+    "src/db/migrations/**"
+  ],
+  "reporter": ["text", "text-summary", "html", "lcov", "json-summary"],
+  "reports-dir": "./coverage"
+}

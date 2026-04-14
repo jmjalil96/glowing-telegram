@@ -10,22 +10,22 @@ import { Separator } from "@/components/ui/separator";
 
 const statCards = [
   {
+    value: "01",
+    title: "Protected route",
+    description:
+      "This page now loads behind the shared session guard used by the router and TanStack Query.",
+  },
+  {
     value: "03",
-    title: "Primary panels",
+    title: "Auth screens",
     description:
-      "Summary, recent activity, and quick actions are stubbed out below.",
+      "Login, forgot-password, and reset-password are now part of the public route tree.",
   },
   {
-    value: "02",
-    title: "Active routes",
+    value: "01",
+    title: "Session query",
     description:
-      "The router currently exposes the homepage and this dashboard placeholder.",
-  },
-  {
-    value: "00",
-    title: "Live dependencies",
-    description:
-      "No loaders, auth, or API-bound widgets are attached to this route yet.",
+      "The app and route guards now share the same auth/me query as the single client-side source of truth.",
   },
 ] as const;
 
@@ -49,9 +49,9 @@ export function DashboardPage() {
         <Separator />
         <CardContent className="pt-6">
           <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-            This route exists to establish the app-shaped structure now. Data
-            loading, auth, and live backend integrations can layer in later
-            without changing the route layout.
+            This route now confirms session state before rendering. Product data
+            and authenticated widgets can layer onto the same shell without
+            changing the auth foundation.
           </p>
         </CardContent>
       </Card>
@@ -112,8 +112,13 @@ export function DashboardPage() {
           <CardContent className="pt-6">
             <ul className="space-y-3 text-sm leading-6 text-muted-foreground">
               <li>Add the first real dashboard widget.</li>
-              <li>Introduce route-level data when the API contract exists.</li>
-              <li>Decide which routes should eventually be authenticated.</li>
+              <li>
+                Introduce route-level data on top of the existing session guard.
+              </li>
+              <li>
+                Expand the signed-in shell with private data and user-specific
+                actions.
+              </li>
             </ul>
           </CardContent>
         </Card>

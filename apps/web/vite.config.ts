@@ -5,7 +5,21 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-const apiTarget = "http://localhost:3000";
+const apiTarget = process.env.VITE_API_TARGET ?? "http://localhost:3000";
+const apiProxy = {
+  "/api": {
+    target: apiTarget,
+    changeOrigin: true,
+  },
+  "/health": {
+    target: apiTarget,
+    changeOrigin: true,
+  },
+  "/ready": {
+    target: apiTarget,
+    changeOrigin: true,
+  },
+};
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -24,20 +38,10 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  preview: {
+    proxy: apiProxy,
+  },
   server: {
-    proxy: {
-      "/api": {
-        target: apiTarget,
-        changeOrigin: true,
-      },
-      "/health": {
-        target: apiTarget,
-        changeOrigin: true,
-      },
-      "/ready": {
-        target: apiTarget,
-        changeOrigin: true,
-      },
-    },
+    proxy: apiProxy,
   },
 });

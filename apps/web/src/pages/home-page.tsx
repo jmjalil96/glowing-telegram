@@ -13,22 +13,22 @@ import { Separator } from "@/components/ui/separator";
 
 const featureCards = [
   {
-    badge: "Route foundation",
-    title: "TanStack Router owns the shell",
+    badge: "Protected routes",
+    title: "Dashboard access is now gated",
     description:
-      "TanStack Router now owns the app shell and route tree, so adding real screens will not require another bootstrap refactor.",
+      "The dashboard now sits behind the shared session guard, so unauthenticated traffic is redirected through the login flow.",
   },
   {
-    badge: "Frontend workspace",
-    title: "Tooling is already aligned",
+    badge: "Auth contracts",
+    title: "Pages mirror the API contract",
     description:
-      "Vite, TypeScript, linting, formatting, and build scripts are already aligned with the rest of the repo.",
+      "Login, forgot-password, and reset-password now match the API response envelope, cookie session model, and query cache updates.",
   },
   {
     badge: "Local integration",
-    title: "Proxy path is in place",
+    title: "Same-origin API wiring stays intact",
     description:
-      "The development proxy is ready, so future product pages can call API routes through the same local origin when needed.",
+      "The web app still calls relative /api routes, so the new auth flows align with the existing Vite proxy and backend cookie strategy.",
   },
 ] as const;
 
@@ -45,22 +45,27 @@ export function HomePage() {
               Techbros Web
             </CardTitle>
             <CardDescription className="text-sm leading-6 sm:text-base">
-              Public placeholder for the web experience.
+              Public entry point for the authenticated web experience.
             </CardDescription>
           </div>
         </CardHeader>
         <Separator />
         <CardContent className="space-y-6 pt-6">
           <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-            The router, workspace wiring, and frontend tooling are in place.
-            This home route is the temporary surface until product-specific
-            pages start landing.
+            Auth is now wired through the existing cookie session contract. Use
+            the login and recovery routes here, or open the protected dashboard
+            if you already have a valid session.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild className="rounded-full">
-              <Link to="/dashboard">Open dashboard</Link>
+              <Link to="/login">Login</Link>
             </Button>
             <Button asChild className="rounded-full" variant="outline">
+              <Link preload="intent" to="/dashboard">
+                Open dashboard
+              </Link>
+            </Button>
+            <Button asChild className="rounded-full" variant="ghost">
               <a href="#homepage-overview">View overview</a>
             </Button>
           </div>

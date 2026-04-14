@@ -2,8 +2,15 @@ import pino from "pino";
 
 import { env } from "../config/env.js";
 
-export const logger = pino({
+const loggerOptions = {
   level: env.LOG_LEVEL,
+  ...(env.NODE_ENV === "development"
+    ? {
+        transport: {
+          target: "pino-pretty",
+        },
+      }
+    : {}),
   redact: [
     "req.headers.authorization",
     "req.headers.cookie",
@@ -12,4 +19,6 @@ export const logger = pino({
     "req.body.accessToken",
     "req.body.refreshToken",
   ],
-});
+};
+
+export const logger = pino(loggerOptions);

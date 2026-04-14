@@ -89,8 +89,12 @@ pnpm --filter @techbros/api run db:down
 
 - Migrations are explicit and manual.
 - The API does not auto-run migrations on startup.
-- Startup requires PostgreSQL to be reachable before the server begins
-  listening.
+- Startup requires PostgreSQL to be reachable and the latest applied Drizzle
+  migration version to exactly match the app's migration journal before the
+  server begins listening.
+- Readiness uses the same connectivity and migration-version check, so `/ready`
+  reports unhealthy for unreachable databases, missing migration state, or any
+  schema version mismatch.
 - Startup and readiness use fail-fast database connection timeouts. Tune them
   with:
   - `PG_POOL_MAX` default `10`

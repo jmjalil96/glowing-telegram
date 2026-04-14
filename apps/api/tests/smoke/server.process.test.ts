@@ -1,191 +1,251 @@
-import { spawn } from "node:child_process";
-import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
-import { join } from "node:path";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { PostgreSqlContainer } from "@testcontainers/postgresql";
-import { afterAll, describe, expect, it } from "vitest";
-
-import { getFreePort } from "../helpers/network.js";
 import {
-  collectProcessLogs,
+  runMigrationsForConnectionString,
+  startTestDatabase,
+  type TestDatabase,
+} from "../helpers/database.js";
+import {
+  expectHttpUnavailable,
+  waitForHttpReady,
+  waitForHttpResponse,
+} from "../helpers/http.js";
+import {
+  getFreePort,
+  occupyPort,
+  startTcpProxy,
+  type OccupiedPort,
+  type TcpProxy,
+} from "../helpers/network.js";
+import {
+  startServerProcess,
+  stopProcess,
   waitForExit,
-  waitForLog,
+  type StartedServerProcess,
 } from "../helpers/process.js";
-import { waitForHttpReady } from "../helpers/http.js";
 
-const apiPackageDir = fileURLToPath(new URL("../../", import.meta.url));
-const tsxBinary = join(
-  apiPackageDir,
-  "node_modules",
-  ".bin",
-  process.platform === "win32" ? "tsx.cmd" : "tsx",
-);
+const PROCESS_ENV = {
+  LOG_LEVEL: "silent",
+  PG_CONNECT_TIMEOUT_MS: "250",
+} as const;
 
-describe("server process smoke", () => {
-  let startedContainer: Awaited<
-    ReturnType<PostgreSqlContainer["start"]>
-  > | null = null;
+describe("server operational contract", () => {
+  let testDatabase: TestDatabase;
+  let databaseProxy: TcpProxy;
 
-  afterAll(async () => {
-    if (startedContainer) {
-      await startedContainer.stop();
-    }
-  });
+  const startedProcesses = new Set<StartedServerProcess>();
+  const occupiedPorts = new Set<OccupiedPort>();
 
-  it("starts against a reachable database and exits cleanly on SIGTERM", async () => {
-    const port = await getFreePort();
-    startedContainer = await new PostgreSqlContainer("postgres:17")
-      .withDatabase("techbros_api_process_test")
-      .withUsername("postgres")
-      .withPassword("postgres")
-      .start();
+  const getProxiedDatabaseUrl = (): string => {
+    const connectionUrl = new URL(testDatabase.connectionString);
 
-    const childProcess = spawn(tsxBinary, ["src/server.ts"], {
-      cwd: apiPackageDir,
-      env: {
-        ...process.env,
-        NODE_ENV: "test",
-        PORT: String(port),
-        DATABASE_URL: startedContainer.getConnectionUri(),
+    connectionUrl.hostname = databaseProxy.host;
+    connectionUrl.port = String(databaseProxy.port);
+
+    return connectionUrl.toString();
+  };
+
+  const getUnmigratedDatabaseUrl = (): string => {
+    const connectionUrl = new URL(testDatabase.connectionString);
+
+    connectionUrl.pathname = "/postgres";
+
+    return connectionUrl.toString();
+  };
+
+  const startServer = (
+    databaseUrl: string,
+    port: number,
+    extraEnv: Record<string, string | undefined> = {},
+  ): StartedServerProcess => {
+    const serverProcess = startServerProcess({
+      databaseUrl,
+      port,
+      extraEnv: {
+        ...PROCESS_ENV,
+        ...extraEnv,
       },
-      stdio: ["ignore", "pipe", "pipe"],
     });
 
-    const logs = collectProcessLogs(childProcess);
+    startedProcesses.add(serverProcess);
 
-    try {
-      await waitForLog(logs, (entry) =>
-        entry.line.includes("Database startup check passed"),
-      );
-      await waitForLog(logs, (entry) =>
-        entry.line.includes("API server listening"),
-      );
+    return serverProcess;
+  };
 
-      const startupCheckIndex = logs.findIndex((entry) =>
-        entry.line.includes("Database startup check passed"),
-      );
-      const listenIndex = logs.findIndex((entry) =>
-        entry.line.includes("API server listening"),
-      );
-
-      expect(startupCheckIndex).toBeGreaterThanOrEqual(0);
-      expect(listenIndex).toBeGreaterThan(startupCheckIndex);
-
-      const healthResponse = await waitForHttpReady(
-        `http://127.0.0.1:${port}/health`,
-      );
-      expect(healthResponse.status).toBe(200);
-
-      const readyResponse = await fetch(`http://127.0.0.1:${port}/ready`);
-      expect(readyResponse.status).toBe(200);
-
-      childProcess.kill("SIGTERM");
-
-      await waitForLog(logs, (entry) =>
-        entry.line.includes("Graceful shutdown completed"),
-      );
-
-      const exitCode = await waitForExit(childProcess);
-
-      expect(exitCode).toBe(0);
-    } finally {
-      if (childProcess.exitCode === null) {
-        childProcess.kill("SIGKILL");
-        await waitForExit(childProcess).catch(() => undefined);
-      }
-
-      await startedContainer.stop();
-      startedContainer = null;
-    }
-  });
-
-  it("fails before listening when the database is unreachable", async () => {
-    const port = await getFreePort();
-    const childProcess = spawn(tsxBinary, ["src/server.ts"], {
-      cwd: apiPackageDir,
-      env: {
-        ...process.env,
-        NODE_ENV: "test",
-        PORT: String(port),
-        DATABASE_URL:
-          "postgresql://postgres:postgres@127.0.0.1:9/techbros_api_process_test",
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const logs = collectProcessLogs(childProcess);
-
-    await waitForLog(logs, (entry) =>
-      entry.line.includes("Database startup check failed"),
+  const waitForReadyOk = async (port: number): Promise<Response> =>
+    waitForHttpResponse(
+      `http://127.0.0.1:${port}/ready`,
+      (response) => response.status === 200,
     );
 
-    const exitCode = await waitForExit(childProcess);
+  const waitForReadyError = async (port: number): Promise<Response> =>
+    waitForHttpResponse(
+      `http://127.0.0.1:${port}/ready`,
+      (response) => response.status === 503,
+    );
 
-    expect(exitCode).toBe(1);
-    expect(
-      logs.some((entry) => entry.line.includes("API server listening")),
-    ).toBe(false);
-    await expect(fetch(`http://127.0.0.1:${port}/health`)).rejects.toThrow();
+  beforeAll(async () => {
+    testDatabase = await startTestDatabase();
+    await runMigrationsForConnectionString(testDatabase.connectionString);
+
+    const databaseUrl = new URL(testDatabase.connectionString);
+    const proxyPort = await getFreePort();
+
+    databaseProxy = await startTcpProxy({
+      targetHost: databaseUrl.hostname,
+      targetPort: Number(databaseUrl.port),
+      listenPort: proxyPort,
+    });
   });
 
-  it("fails cleanly when the configured port is already in use", async () => {
-    const port = await getFreePort();
-    const occupiedServer = createServer((_req, res) => {
-      res.statusCode = 200;
-      res.end("occupied");
-    });
-    startedContainer = await new PostgreSqlContainer("postgres:17")
-      .withDatabase("techbros_api_port_test")
-      .withUsername("postgres")
-      .withPassword("postgres")
-      .start();
+  afterEach(async () => {
+    databaseProxy.enable();
 
-    await new Promise<void>((resolve, reject) => {
-      occupiedServer.once("error", reject);
-      occupiedServer.listen(port, () => {
-        occupiedServer.off("error", reject);
-        resolve();
-      });
-    });
-
-    const childProcess = spawn(tsxBinary, ["src/server.ts"], {
-      cwd: apiPackageDir,
-      env: {
-        ...process.env,
-        NODE_ENV: "test",
-        PORT: String(port),
-        DATABASE_URL: startedContainer.getConnectionUri(),
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const logs = collectProcessLogs(childProcess);
-
-    try {
-      await waitForLog(logs, (entry) =>
-        entry.line.includes("Database startup check passed"),
-      );
-      await waitForLog(logs, (entry) =>
-        entry.line.includes("HTTP server startup failed"),
-      );
-
-      const exitCode = await waitForExit(childProcess);
-
-      expect(exitCode).toBe(1);
-      expect(
-        logs.some((entry) => entry.line.includes("API server listening")),
-      ).toBe(false);
-    } finally {
-      occupiedServer.close();
-
-      if (childProcess.exitCode === null) {
-        childProcess.kill("SIGKILL");
-        await waitForExit(childProcess).catch(() => undefined);
-      }
-
-      await startedContainer.stop();
-      startedContainer = null;
+    for (const startedProcess of startedProcesses) {
+      await stopProcess(startedProcess.childProcess);
     }
+
+    startedProcesses.clear();
+
+    for (const occupiedPort of occupiedPorts) {
+      await occupiedPort.close();
+    }
+
+    occupiedPorts.clear();
+  });
+
+  afterAll(async () => {
+    await databaseProxy.close();
+    await testDatabase.stop();
+  });
+
+  it("boots and becomes reachable with a healthy migrated database", async () => {
+    const port = await getFreePort();
+
+    startServer(getProxiedDatabaseUrl(), port);
+
+    const healthResponse = await waitForHttpReady(
+      `http://127.0.0.1:${port}/health`,
+    );
+
+    expect(healthResponse.status).toBe(200);
+    await expect(healthResponse.json()).resolves.toEqual({
+      status: "ok",
+    });
+
+    const readyResponse = await waitForReadyOk(port);
+
+    await expect(readyResponse.json()).resolves.toEqual({
+      status: "ok",
+      checks: {
+        database: "ok",
+      },
+    });
+
+    const statusResponse = await fetch(
+      `http://127.0.0.1:${port}/api/v1/status`,
+    );
+
+    expect(statusResponse.status).toBe(200);
+    await expect(statusResponse.json()).resolves.toEqual({
+      status: "ok",
+    });
+  });
+
+  it("fails startup when the database is unreachable", async () => {
+    const databasePort = await getFreePort();
+    const port = await getFreePort();
+
+    const startedProcess = startServer(
+      `postgresql://postgres:postgres@127.0.0.1:${databasePort}/techbros_api_test`,
+      port,
+    );
+
+    await expect(waitForExit(startedProcess.childProcess)).resolves.toBe(1);
+    await expectHttpUnavailable(`http://127.0.0.1:${port}/health`);
+  });
+
+  it("fails startup when the HTTP port is already in use", async () => {
+    const port = await getFreePort();
+    const occupiedPort = await occupyPort(port);
+
+    occupiedPorts.add(occupiedPort);
+
+    const startedProcess = startServer(getProxiedDatabaseUrl(), port);
+
+    await expect(waitForExit(startedProcess.childProcess)).resolves.toBe(1);
+  });
+
+  it("fails startup when the database is reachable but the schema version is unusable", async () => {
+    const port = await getFreePort();
+    const startedProcess = startServer(getUnmigratedDatabaseUrl(), port);
+
+    await expect(waitForExit(startedProcess.childProcess)).resolves.toBe(1);
+    await expectHttpUnavailable(`http://127.0.0.1:${port}/health`);
+  });
+
+  it("/health stays 200 during a database outage", async () => {
+    const port = await getFreePort();
+    const startedProcess = startServer(getProxiedDatabaseUrl(), port);
+
+    await waitForReadyOk(port);
+    databaseProxy.disable();
+
+    const healthResponse = await fetch(`http://127.0.0.1:${port}/health`);
+
+    expect(healthResponse.status).toBe(200);
+    await expect(healthResponse.json()).resolves.toEqual({
+      status: "ok",
+    });
+    expect(startedProcess.childProcess.exitCode).toBeNull();
+  });
+
+  it("/ready flips to 503 during a database outage", async () => {
+    const port = await getFreePort();
+
+    startServer(getProxiedDatabaseUrl(), port);
+
+    await waitForReadyOk(port);
+    databaseProxy.disable();
+
+    const readyResponse = await waitForReadyError(port);
+
+    await expect(readyResponse.json()).resolves.toEqual({
+      status: "error",
+      checks: {
+        database: "error",
+      },
+    });
+  });
+
+  it("/ready recovers to 200 after the database path is restored", async () => {
+    const port = await getFreePort();
+
+    startServer(getProxiedDatabaseUrl(), port);
+
+    await waitForReadyOk(port);
+    databaseProxy.disable();
+    await waitForReadyError(port);
+
+    databaseProxy.enable();
+
+    const readyResponse = await waitForReadyOk(port);
+
+    await expect(readyResponse.json()).resolves.toEqual({
+      status: "ok",
+      checks: {
+        database: "ok",
+      },
+    });
+  });
+
+  it("shuts down gracefully on SIGTERM", async () => {
+    const port = await getFreePort();
+    const startedProcess = startServer(getProxiedDatabaseUrl(), port);
+
+    await waitForHttpReady(`http://127.0.0.1:${port}/health`);
+
+    await expect(stopProcess(startedProcess.childProcess)).resolves.toBe(0);
+    await expectHttpUnavailable(`http://127.0.0.1:${port}/health`);
   });
 });

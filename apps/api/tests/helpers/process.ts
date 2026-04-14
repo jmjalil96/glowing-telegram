@@ -1,12 +1,53 @@
-import type { ChildProcessByStdio } from "node:child_process";
+import { spawn, type ChildProcessByStdio } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import type { Readable } from "node:stream";
 
-type LoggedChildProcess = ChildProcessByStdio<null, Readable, Readable>;
+const apiPackageRoot = fileURLToPath(new URL("../../", import.meta.url));
+
+export type LoggedChildProcess = ChildProcessByStdio<null, Readable, Readable>;
+
+export interface StartServerProcessOptions {
+  databaseUrl: string;
+  port: number;
+  extraEnv?: Record<string, string | undefined>;
+}
+
+export interface StartedServerProcess {
+  childProcess: LoggedChildProcess;
+  logs: ProcessLogEntry[];
+}
 
 export interface ProcessLogEntry {
   stream: "stdout" | "stderr";
   line: string;
 }
+
+export const startServerProcess = ({
+  databaseUrl,
+  port,
+  extraEnv = {},
+}: StartServerProcessOptions): StartedServerProcess => {
+  const childProcess = spawn(
+    process.execPath,
+    ["--import", "tsx", "src/server.ts"],
+    {
+      cwd: apiPackageRoot,
+      env: {
+        ...process.env,
+        NODE_ENV: "test",
+        PORT: String(port),
+        DATABASE_URL: databaseUrl,
+        ...extraEnv,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+
+  return {
+    childProcess,
+    logs: collectProcessLogs(childProcess),
+  };
+};
 
 export const collectProcessLogs = (
   childProcess: LoggedChildProcess,
@@ -114,3 +155,23 @@ export const waitForExit = async (
       reject(error);
     });
   });
+
+export const stopProcess = async (
+  childProcess: LoggedChildProcess,
+  signal: NodeJS.Signals = "SIGTERM",
+  timeoutMs = 15_000,
+): Promise<number | null> => {
+  if (childProcess.exitCode !== null) {
+    return childProcess.exitCode;
+  }
+
+  childProcess.kill(signal);
+
+  try {
+    return await waitForExit(childProcess, timeoutMs);
+  } catch {
+    childProcess.kill("SIGKILL");
+
+    return waitForExit(childProcess, 5_000);
+  }
+};

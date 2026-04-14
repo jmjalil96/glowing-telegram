@@ -82,7 +82,8 @@ Run these from the repo root.
 
 - `GET /health`: liveness check, returns `200` with `{ "status": "ok" }`
 - `GET /ready`: readiness check, returns `200` when PostgreSQL is reachable and
-  `503` when it is not
+  the latest applied Drizzle migration version exactly matches the app's
+  expected version; returns `503` otherwise
 
 ## Runtime Defaults
 
@@ -93,6 +94,7 @@ Run these from the repo root.
   `CORS_ALLOWED_ORIGINS` is not set
 - In `production`, `CORS_ALLOWED_ORIGINS` must be configured explicitly
 - Database startup and readiness checks use a `5s` connection timeout by default
+  and require the expected Drizzle migration version
 
 ## Public API Seed
 

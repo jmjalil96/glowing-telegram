@@ -96,6 +96,39 @@ export default defineConfig(
     rules: sharedTypeScriptRules,
   },
   {
+    files: ["apps/web/vitest.config.ts", "apps/web/playwright.config.ts"],
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: {
+        projectService: {
+          allowDefaultProject: [
+            "apps/web/vitest.config.ts",
+            "apps/web/playwright.config.ts",
+          ],
+          defaultProject: "apps/web/tests/tsconfig.json",
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: sharedTypeScriptRules,
+  },
+  {
+    files: ["apps/web/tests/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+      parserOptions: {
+        projectService: {
+          defaultProject: "apps/web/tests/tsconfig.json",
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: sharedTypeScriptRules,
+  },
+  {
     files: ["apps/web/src/routes/**/*.tsx"],
     rules: {
       "react-refresh/only-export-components": "off",
@@ -103,6 +136,12 @@ export default defineConfig(
   },
   {
     files: ["apps/web/src/components/ui/**/*.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
+  {
+    files: ["apps/web/tests/**/*.tsx"],
     rules: {
       "react-refresh/only-export-components": "off",
     },

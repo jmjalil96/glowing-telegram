@@ -2,7 +2,7 @@ import type { Server } from "node:http";
 
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
-import { closePool, verifyDatabaseConnection } from "./db/client.js";
+import { closePool, verifyDatabaseOperationalReadiness } from "./db/client.js";
 import { logger } from "./lib/logger.js";
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -97,10 +97,10 @@ for (const signal of SHUTDOWN_SIGNALS) {
 
 const startServer = async (): Promise<void> => {
   try {
-    await verifyDatabaseConnection();
-    logger.info("Database startup check passed");
+    await verifyDatabaseOperationalReadiness();
+    logger.info("Database startup readiness check passed");
   } catch (error) {
-    logger.error({ err: error }, "Database startup check failed");
+    logger.error({ err: error }, "Database startup readiness check failed");
     await closePool();
     process.exit(1);
   }

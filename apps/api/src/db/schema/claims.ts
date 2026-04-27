@@ -6,9 +6,11 @@ import {
   date,
   foreignKey,
   index,
+  integer,
   numeric,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -16,7 +18,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { usersTable } from "./auth.js";
+import { tenantsTable, usersTable } from "./auth.js";
 import { diagnosesTable } from "./diagnoses.js";
 import { policyEnrollmentMembersTable } from "./enrollments.js";
 
@@ -45,6 +47,31 @@ export const claimSubmissionStatusEnum = pgEnum("claim_submission_status", [
   "cancelled",
 ]);
 
+export const claimNumberCountersTable = pgTable(
+  "claim_number_counters",
+  {
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantsTable.id, { onDelete: "cascade" }),
+    claimYear: integer("claim_year").notNull(),
+    currentValue: integer("current_value").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.claimYear] }),
+    check("claim_number_counters_year_check", sql`${table.claimYear} > 0`),
+    check(
+      "claim_number_counters_current_value_check",
+      sql`${table.currentValue} >= 0`,
+    ),
+  ],
+);
+
 export const claimsTable = pgTable(
   "claims",
   {
@@ -53,6 +80,7 @@ export const claimsTable = pgTable(
       .$defaultFn(() => randomUUID()),
     tenantId: uuid("tenant_id").notNull(),
     claimNumber: text("claim_number").notNull(),
+    insurerClaimNumber: text("insurer_claim_number"),
     status: claimStatusEnum("status").notNull(),
     enrollmentMemberId: uuid("enrollment_member_id").notNull(),
     intakeSubmittedAt: timestamp("intake_submitted_at", {
@@ -139,13 +167,22 @@ export const claimsTable = pgTable(
       sql`${table.diagnosisId} is null or ${table.diagnosisOtherText} is null`,
     ),
     unique("claims_id_tenant_id_unique").on(table.id, table.tenantId),
-    uniqueIndex("claims_claim_number_unique").on(table.claimNumber),
+    uniqueIndex("claims_tenant_id_claim_number_unique").on(
+      table.tenantId,
+      table.claimNumber,
+    ),
     index("claims_tenant_id_idx").on(table.tenantId),
     index("claims_status_idx").on(table.status),
+    index("claims_tenant_status_idx").on(table.tenantId, table.status),
     index("claims_enrollment_member_id_idx").on(table.enrollmentMemberId),
     index("claims_diagnosis_id_idx").on(table.diagnosisId),
     index("claims_event_date_idx").on(table.eventDate),
+    index("claims_tenant_event_date_idx").on(table.tenantId, table.eventDate),
     index("claims_sent_to_insurer_at_idx").on(table.sentToInsurerAt),
+    index("claims_tenant_sent_to_insurer_at_idx").on(
+      table.tenantId,
+      table.sentToInsurerAt,
+    ),
   ],
 );
 

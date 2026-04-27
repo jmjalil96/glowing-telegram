@@ -14,6 +14,7 @@ import {
 } from "./schema/auth.js";
 import {
   claimInvoicesTable,
+  claimNumberCountersTable,
   claimSubmissionHistoryTable,
   claimSubmissionsTable,
   claimsTable,
@@ -70,6 +71,7 @@ export const db = drizzle({
     affiliatesTable,
     auditLogsTable,
     claimInvoicesTable,
+    claimNumberCountersTable,
     claimSubmissionHistoryTable,
     claimSubmissionsTable,
     claimsTable,

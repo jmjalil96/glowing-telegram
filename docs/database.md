@@ -40,14 +40,18 @@ The current schema covers the core API domain:
 - client administration: clients, client users, affiliates
 - policy administration: insurers, policies, policy enrollments, enrollment
   members
-- claims: claims, claim invoices, claim submissions, claim status history,
-  submission status history
+- claims: claims, tenant-scoped claim number counters, claim invoices, claim
+  submissions, claim status history, submission status history
 - reference and operations data: diagnoses, audit logs
 
 Tenant-owned domain rows carry `tenant_id` and use tenant-scoped foreign keys
 where cross-tenant leakage would be risky. Claims, claim submissions, claim
 history, submission history, and claim invoices all link back to their parent
 records with composite tenant-scoped constraints.
+
+Claim numbers are tenant-scoped internal identifiers. Insurer-provided claim
+references should be stored separately on `claims.insurer_claim_number`, because
+external numbers can repeat across tenants, clients, or insurers.
 
 ## Commands
 

@@ -71,6 +71,13 @@
       "when": 1777312256499,
       "tag": "0009_curvy_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777320342768,
+      "tag": "0010_shiny_zeigeist",
+      "breakpoints": true
     }
   ]
 }

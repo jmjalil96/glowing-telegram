@@ -1,0 +1,2596 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Techbros DB Schema Viewer</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fa;
+        --panel: #ffffff;
+        --panel-soft: #f1f5f9;
+        --text: #172033;
+        --muted: #687386;
+        --border: #d9e0ea;
+        --border-strong: #b9c5d4;
+        --accent: #136f63;
+        --accent-soft: #e6f4f1;
+        --blue: #1f5f99;
+        --blue-soft: #e8f1fa;
+        --amber: #8a5a11;
+        --amber-soft: #fff3d8;
+        --red: #9f3030;
+        --red-soft: #fae8e8;
+        --shadow: 0 12px 30px rgb(18 32 53 / 8%);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      body {
+        margin: 0;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .app {
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+        gap: 18px;
+        max-width: 1500px;
+        margin: 0 auto;
+      }
+
+      .sidebar,
+      .workspace {
+        min-width: 0;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 24px;
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 48px);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .workspace {
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .sidebar-header,
+      .workspace-header,
+      .field-toolbar,
+      .section-header {
+        border-bottom: 1px solid var(--border);
+      }
+
+      .sidebar-header,
+      .workspace-header {
+        padding: 18px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      h2 {
+        font-size: 24px;
+        line-height: 1.2;
+      }
+
+      h3 {
+        font-size: 15px;
+        line-height: 1.3;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .small {
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .search-wrap {
+        padding: 14px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .search-wrap label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .search-wrap input {
+        width: 100%;
+        height: 38px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0 12px;
+        background: #ffffff;
+        color: var(--text);
+        outline: none;
+      }
+
+      .search-wrap input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgb(19 111 99 / 14%);
+      }
+
+      .tabs {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 4px;
+        overflow: auto;
+        padding: 10px;
+      }
+
+      .tab {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 48px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 9px 10px;
+        background: transparent;
+        color: var(--text);
+        text-align: left;
+      }
+
+      .tab:hover {
+        background: var(--panel-soft);
+      }
+
+      .tab.active {
+        border-color: rgb(19 111 99 / 35%);
+        background: var(--accent-soft);
+      }
+
+      .tab-name {
+        overflow-wrap: anywhere;
+        font-size: 14px;
+        font-weight: 750;
+      }
+
+      .tab-meta {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .count-pill {
+        min-width: 30px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 3px 7px;
+        background: #ffffff;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        text-align: center;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-bottom: 1px solid var(--border);
+      }
+
+      .metric {
+        padding: 16px 18px;
+        border-right: 1px solid var(--border);
+      }
+
+      .metric:last-child {
+        border-right: 0;
+      }
+
+      .metric-value {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .metric-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .workspace-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .nav-buttons {
+        display: flex;
+        gap: 8px;
+      }
+
+      .nav-button,
+      .toggle-button {
+        min-height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0 12px;
+        background: #ffffff;
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .nav-button:hover,
+      .toggle-button:hover {
+        border-color: var(--border-strong);
+        background: var(--panel-soft);
+      }
+
+      .toggle-button.active {
+        border-color: rgb(31 95 153 / 35%);
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .chip,
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 12px;
+        font-weight: 750;
+        white-space: nowrap;
+      }
+
+      .chip {
+        border: 1px solid var(--border);
+        background: #ffffff;
+        color: var(--muted);
+      }
+
+      .chip.category {
+        border-color: rgb(19 111 99 / 25%);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .tag {
+        background: var(--panel-soft);
+        color: var(--muted);
+      }
+
+      .tag.pk,
+      .tag.fk {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .tag.unique,
+      .tag.check {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .tag.required {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      .content {
+        display: grid;
+        gap: 18px;
+        padding: 18px;
+      }
+
+      .field-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 18px;
+        background: #fbfcfd;
+      }
+
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      table {
+        width: 100%;
+        min-width: 860px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+        text-align: left;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #f8fafc;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .field-name {
+        display: block;
+        font-weight: 800;
+      }
+
+      code {
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 2px 5px;
+        background: #f8fafc;
+        color: #273449;
+        font-family:
+          "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 12px;
+      }
+
+      .field-note {
+        max-width: 380px;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .info-panel {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .section-header {
+        padding: 13px 14px;
+        background: #fbfcfd;
+      }
+
+      .info-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 14px;
+        list-style: none;
+      }
+
+      .info-item {
+        display: grid;
+        gap: 4px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .info-item strong {
+        color: var(--text);
+      }
+
+      .empty-state {
+        border: 1px dashed var(--border-strong);
+        border-radius: 8px;
+        padding: 18px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 980px) {
+        .app {
+          padding: 12px;
+        }
+
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+          max-height: 420px;
+        }
+
+        .summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .metric:nth-child(2) {
+          border-right: 0;
+        }
+
+        .metric:nth-child(-n + 2) {
+          border-bottom: 1px solid var(--border);
+        }
+
+        .workspace-header,
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .nav-buttons {
+          justify-content: stretch;
+        }
+
+        .nav-button {
+          flex: 1;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .metric,
+        .metric:nth-child(2) {
+          border-right: 0;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .metric:last-child {
+          border-bottom: 0;
+        }
+
+        h2 {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="shell">
+        <aside class="sidebar" aria-label="Database tables">
+          <div class="sidebar-header">
+            <p class="eyebrow">Schema Snapshot</p>
+            <h1>DB Table Viewer</h1>
+            <p class="small muted">
+              Static snapshot from <code>apps/api/src/db/schema</code>.
+            </p>
+          </div>
+          <div class="search-wrap">
+            <label for="tableSearch">Find a table or category</label>
+            <input
+              id="tableSearch"
+              autocomplete="off"
+              placeholder="Search tables..."
+              type="search"
+            />
+          </div>
+          <nav class="tabs" id="tableTabs"></nav>
+        </aside>
+
+        <main class="workspace">
+          <section class="summary-grid" aria-label="Schema summary">
+            <div class="metric">
+              <span class="metric-value" id="totalTables">0</span>
+              <span class="metric-label">Tables</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="totalFields">0</span>
+              <span class="metric-label">Fields</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="totalEnums">0</span>
+              <span class="metric-label">Enums</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="visibleFields">0</span>
+              <span class="metric-label">Visible Fields</span>
+            </div>
+          </section>
+
+          <section class="workspace-header">
+            <div>
+              <div class="title-row">
+                <h2 id="tableTitle">Table</h2>
+                <span class="chip category" id="tableCategory">Category</span>
+              </div>
+              <p class="small muted" id="tableDescription"></p>
+            </div>
+            <div class="nav-buttons">
+              <button class="nav-button" id="prevTable" type="button">
+                Previous
+              </button>
+              <button class="nav-button" id="nextTable" type="button">
+                Next
+              </button>
+            </div>
+          </section>
+
+          <section class="field-toolbar">
+            <div class="chips" id="tableChips"></div>
+            <button class="toggle-button" id="keyToggle" type="button">
+              Show keys/indexed fields only
+            </button>
+          </section>
+
+          <section class="content">
+            <div class="table-wrap">
+              <table aria-label="Table fields">
+                <thead>
+                  <tr>
+                    <th>Field</th>
+                    <th>DB Type</th>
+                    <th>Required</th>
+                    <th>Default</th>
+                    <th>Tags</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="fieldRows"></tbody>
+              </table>
+            </div>
+
+            <div class="info-grid">
+              <section class="info-panel">
+                <div class="section-header">
+                  <h3>Relationships</h3>
+                </div>
+                <ul class="info-list" id="relationshipList"></ul>
+              </section>
+
+              <section class="info-panel">
+                <div class="section-header">
+                  <h3>Constraints and Enum Values</h3>
+                </div>
+                <ul class="info-list" id="constraintList"></ul>
+              </section>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const schemaTables = [
+        {
+          name: "tenants",
+          category: "Auth",
+          description:
+            "Tenant organizations that scope most user and product data.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Tenant identifier.",
+            ),
+            field(
+              "slug",
+              "varchar(128)",
+              true,
+              "-",
+              ["Unique"],
+              "Stable tenant slug.",
+            ),
+            field("name", "text", true, "-", [], "Tenant display name."),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [],
+          constraints: ["tenants_slug_unique on slug"],
+          enums: [],
+        },
+        {
+          name: "users",
+          category: "Auth",
+          description: "Login identities scoped to one tenant.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "User identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index", "Unique"],
+              "References tenants.id.",
+            ),
+            field(
+              "email",
+              "varchar(320)",
+              true,
+              "-",
+              ["Unique"],
+              "Globally unique login email.",
+            ),
+            field("password_hash", "text", true, "-", [], "Password hash."),
+            field(
+              "display_name",
+              "text",
+              false,
+              "-",
+              [],
+              "Optional display name.",
+            ),
+            field(
+              "email_verified_at",
+              "timestamp with time zone",
+              false,
+              "-",
+              [],
+              "Email verification timestamp.",
+            ),
+            field(
+              "is_active",
+              "boolean",
+              true,
+              "true",
+              [],
+              "Disables login/session use when false.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: ["tenant_id -> tenants.id"],
+          constraints: [
+            "users_email_unique on email",
+            "users_id_tenant_id_unique on id, tenant_id",
+            "users_tenant_id_idx on tenant_id",
+          ],
+          enums: [],
+        },
+        {
+          name: "sessions",
+          category: "Auth",
+          description: "Opaque-token session records for authenticated users.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Session identifier.",
+            ),
+            field(
+              "user_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "References users.id.",
+            ),
+            field(
+              "token_hash",
+              "text",
+              true,
+              "-",
+              ["Unique"],
+              "Hash of the raw session token.",
+            ),
+            field(
+              "expires_at",
+              "timestamp with time zone",
+              true,
+              "-",
+              ["Index"],
+              "Session expiration.",
+            ),
+            field(
+              "revoked_at",
+              "timestamp with time zone",
+              false,
+              "-",
+              [],
+              "Set when the session is revoked.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+          ],
+          relationships: ["user_id -> users.id"],
+          constraints: [
+            "sessions_token_hash_unique on token_hash",
+            "sessions_user_id_idx on user_id",
+            "sessions_expires_at_idx on expires_at",
+          ],
+          enums: [],
+        },
+        {
+          name: "user_tokens",
+          category: "Auth",
+          description: "Single-use user tokens such as password reset tokens.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Token row identifier.",
+            ),
+            field(
+              "user_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "References users.id.",
+            ),
+            field(
+              "token_hash",
+              "text",
+              true,
+              "-",
+              ["Unique"],
+              "Hash of the issued opaque token.",
+            ),
+            field("type", "text", true, "-", ["Index"], "Token purpose."),
+            field(
+              "expires_at",
+              "timestamp with time zone",
+              true,
+              "-",
+              ["Index"],
+              "Token expiration.",
+            ),
+            field(
+              "used_at",
+              "timestamp with time zone",
+              false,
+              "-",
+              [],
+              "Set once token is consumed or invalidated.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+          ],
+          relationships: ["user_id -> users.id"],
+          constraints: [
+            "user_tokens_token_hash_unique on token_hash",
+            "user_tokens_user_id_idx on user_id",
+            "user_tokens_type_idx on type",
+            "user_tokens_expires_at_idx on expires_at",
+          ],
+          enums: [],
+        },
+        {
+          name: "audit_logs",
+          category: "Audit",
+          description:
+            "Append-only application event log with optional tenant and actor context.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "gen_random_uuid()",
+              ["PK"],
+              "Audit log identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              false,
+              "-",
+              ["FK", "Index"],
+              "References tenants.id; nullable for system events.",
+            ),
+            field(
+              "actor_user_id",
+              "uuid",
+              false,
+              "-",
+              ["FK", "Index"],
+              "Actor must belong to tenant when present.",
+            ),
+            field(
+              "action",
+              "varchar(128)",
+              true,
+              "-",
+              ["Index"],
+              "Event action name.",
+            ),
+            field(
+              "target_type",
+              "varchar(64)",
+              false,
+              "-",
+              ["Index"],
+              "Logical target type.",
+            ),
+            field(
+              "target_id",
+              "uuid",
+              false,
+              "-",
+              ["Index"],
+              "Logical target id.",
+            ),
+            field(
+              "request_id",
+              "varchar(255)",
+              false,
+              "-",
+              [],
+              "Request correlation id.",
+            ),
+            field(
+              "ip_address",
+              "varchar(64)",
+              false,
+              "-",
+              [],
+              "Client IP address.",
+            ),
+            field("user_agent", "text", false, "-", [], "Client user agent."),
+            field(
+              "metadata",
+              "jsonb",
+              true,
+              "'{}'::jsonb",
+              [],
+              "Additional structured details.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              ["Index"],
+              "Created timestamp.",
+            ),
+          ],
+          relationships: [
+            "tenant_id -> tenants.id ON DELETE SET NULL",
+            "actor_user_id, tenant_id -> users.id, users.tenant_id ON DELETE SET NULL",
+          ],
+          constraints: [
+            "audit_logs_actor_requires_tenant_check: actor_user_id requires tenant_id",
+            "audit_logs_target_idx on target_type, target_id",
+          ],
+          enums: [],
+        },
+        {
+          name: "roles",
+          category: "RBAC",
+          description: "Role definitions assigned to users through user_roles.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Role identifier.",
+            ),
+            field(
+              "slug",
+              "varchar(128)",
+              true,
+              "-",
+              ["Unique"],
+              "Stable role slug.",
+            ),
+            field("name", "text", true, "-", [], "Role display name."),
+            field(
+              "description",
+              "text",
+              false,
+              "-",
+              [],
+              "Optional role description.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [],
+          constraints: ["roles_slug_unique on slug"],
+          enums: [],
+        },
+        {
+          name: "permissions",
+          category: "RBAC",
+          description: "Permission definitions attached to roles.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Permission identifier.",
+            ),
+            field(
+              "slug",
+              "varchar(128)",
+              true,
+              "-",
+              ["Unique"],
+              "Stable permission slug.",
+            ),
+            field("name", "text", true, "-", [], "Permission display name."),
+            field(
+              "description",
+              "text",
+              false,
+              "-",
+              [],
+              "Optional permission description.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [],
+          constraints: ["permissions_slug_unique on slug"],
+          enums: [],
+        },
+        {
+          name: "role_permissions",
+          category: "RBAC",
+          description: "Join table mapping roles to permissions.",
+          fields: [
+            field(
+              "role_id",
+              "uuid",
+              true,
+              "-",
+              ["PK", "FK"],
+              "References roles.id.",
+            ),
+            field(
+              "permission_id",
+              "uuid",
+              true,
+              "-",
+              ["PK", "FK", "Index"],
+              "References permissions.id.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+          ],
+          relationships: [
+            "role_id -> roles.id ON DELETE CASCADE",
+            "permission_id -> permissions.id ON DELETE CASCADE",
+          ],
+          constraints: [
+            "Primary key on role_id, permission_id",
+            "role_permissions_permission_id_idx on permission_id",
+          ],
+          enums: [],
+        },
+        {
+          name: "user_roles",
+          category: "RBAC",
+          description: "Join table mapping users to roles.",
+          fields: [
+            field(
+              "user_id",
+              "uuid",
+              true,
+              "-",
+              ["PK", "FK"],
+              "References users.id.",
+            ),
+            field(
+              "role_id",
+              "uuid",
+              true,
+              "-",
+              ["PK", "FK", "Index"],
+              "References roles.id.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+          ],
+          relationships: [
+            "user_id -> users.id ON DELETE CASCADE",
+            "role_id -> roles.id ON DELETE CASCADE",
+          ],
+          constraints: [
+            "Primary key on user_id, role_id",
+            "user_roles_role_id_idx on role_id",
+          ],
+          enums: [],
+        },
+        {
+          name: "clients",
+          category: "CRM",
+          description: "Client organizations inside a tenant.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Client identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index", "Unique"],
+              "References tenants.id.",
+            ),
+            field("name", "text", true, "-", [], "Client display name."),
+            field("is_active", "boolean", true, "true", [], "Active flag."),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: ["tenant_id -> tenants.id ON DELETE CASCADE"],
+          constraints: [
+            "clients_id_tenant_id_unique on id, tenant_id",
+            "clients_tenant_id_idx on tenant_id",
+          ],
+          enums: [],
+        },
+        {
+          name: "client_users",
+          category: "CRM",
+          description:
+            "Join table connecting users to clients within the same tenant.",
+          fields: [
+            field(
+              "user_id",
+              "uuid",
+              true,
+              "-",
+              ["PK", "FK"],
+              "References users.id with tenant scope.",
+            ),
+            field(
+              "client_id",
+              "uuid",
+              true,
+              "-",
+              ["PK", "FK", "Index"],
+              "References clients.id with tenant scope.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Tenant scope shared by user and client.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+          ],
+          relationships: [
+            "user_id, tenant_id -> users.id, users.tenant_id ON DELETE CASCADE",
+            "client_id, tenant_id -> clients.id, clients.tenant_id ON DELETE CASCADE",
+          ],
+          constraints: [
+            "Primary key on user_id, client_id",
+            "client_users_client_id_idx on client_id, tenant_id",
+          ],
+          enums: [],
+        },
+        {
+          name: "affiliates",
+          category: "CRM",
+          description: "Covered people or employees attached to clients.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Affiliate identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index", "Unique"],
+              "References tenants.id.",
+            ),
+            field(
+              "client_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index", "Unique"],
+              "Client scope.",
+            ),
+            field(
+              "primary_affiliate_id",
+              "uuid",
+              false,
+              "-",
+              ["FK", "Index"],
+              "Primary affiliate for dependents.",
+            ),
+            field(
+              "user_id",
+              "uuid",
+              false,
+              "-",
+              ["FK", "Unique"],
+              "Optional linked user for self affiliates only.",
+            ),
+            field(
+              "document_number",
+              "text",
+              true,
+              "-",
+              [],
+              "Document or identity number.",
+            ),
+            field("first_name", "text", true, "-", [], "First name."),
+            field("last_name", "text", true, "-", [], "Last name."),
+            field(
+              "relationship_to_primary",
+              "affiliate_relationship_to_primary",
+              true,
+              "-",
+              ["Enum", "Check"],
+              "Relationship to the primary affiliate.",
+            ),
+            field("birth_date", "date", true, "-", [], "Birth date."),
+            field("is_active", "boolean", true, "true", [], "Active flag."),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [
+            "tenant_id -> tenants.id ON DELETE CASCADE",
+            "client_id, tenant_id -> clients.id, clients.tenant_id ON DELETE CASCADE",
+            "primary_affiliate_id, tenant_id, client_id -> affiliates.id, affiliates.tenant_id, affiliates.client_id ON DELETE RESTRICT",
+            "user_id, tenant_id -> users.id, users.tenant_id ON DELETE RESTRICT",
+          ],
+          constraints: [
+            "affiliates_primary_affiliate_presence_check: self has no primary, non-self requires one",
+            "affiliates_primary_affiliate_not_self_check",
+            "affiliates_user_id_self_only_check",
+            "affiliates_user_id_unique on user_id",
+            "affiliates_id_tenant_client_unique on id, tenant_id, client_id",
+          ],
+          enums: [
+            enumInfo("affiliate_relationship_to_primary", [
+              "self",
+              "spouse",
+              "child",
+              "other",
+            ]),
+          ],
+        },
+        {
+          name: "insurers",
+          category: "Policy",
+          description: "Insurance carriers scoped to a tenant.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Insurer identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index", "Unique"],
+              "References tenants.id.",
+            ),
+            field(
+              "name",
+              "text",
+              true,
+              "-",
+              ["Unique"],
+              "Insurer name unique per tenant.",
+            ),
+            field("is_active", "boolean", true, "true", [], "Active flag."),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: ["tenant_id -> tenants.id ON DELETE CASCADE"],
+          constraints: [
+            "insurers_id_tenant_id_unique on id, tenant_id",
+            "insurers_tenant_id_name_unique on tenant_id, name",
+            "insurers_tenant_id_idx on tenant_id",
+          ],
+          enums: [],
+        },
+        {
+          name: "policies",
+          category: "Policy",
+          description: "Client insurance policies issued by insurers.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Policy identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index", "Unique"],
+              "Tenant scope.",
+            ),
+            field(
+              "client_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index", "Unique"],
+              "Client scope.",
+            ),
+            field(
+              "insurer_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Insurer scope.",
+            ),
+            field("policy_number", "text", true, "-", [], "Policy number."),
+            field(
+              "effective_date",
+              "date",
+              true,
+              "-",
+              ["Check"],
+              "Policy start date.",
+            ),
+            field(
+              "expiration_date",
+              "date",
+              false,
+              "-",
+              ["Check"],
+              "Policy end date.",
+            ),
+            field("is_active", "boolean", true, "true", [], "Active flag."),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [
+            "tenant_id -> tenants.id ON DELETE CASCADE",
+            "client_id, tenant_id -> clients.id, clients.tenant_id ON DELETE RESTRICT",
+            "insurer_id, tenant_id -> insurers.id, insurers.tenant_id ON DELETE RESTRICT",
+          ],
+          constraints: [
+            "policies_date_range_check: expiration_date is null or >= effective_date",
+            "policies_id_tenant_client_unique on id, tenant_id, client_id",
+            "policies_tenant_id_idx on tenant_id",
+            "policies_client_id_idx on client_id",
+            "policies_insurer_id_idx on insurer_id",
+          ],
+          enums: [],
+        },
+        {
+          name: "policy_enrollments",
+          category: "Enrollment",
+          description: "Primary affiliate enrollment into a scoped policy.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Enrollment identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Unique", "Index"],
+              "Tenant scope.",
+            ),
+            field(
+              "client_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Unique", "Index"],
+              "Client scope.",
+            ),
+            field(
+              "policy_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "References policies with tenant and client scope.",
+            ),
+            field(
+              "primary_affiliate_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Primary affiliate enrolled in the policy.",
+            ),
+            field(
+              "intake_reason",
+              "policy_enrollment_intake_reason",
+              true,
+              "-",
+              ["Enum"],
+              "Reason the enrollment started.",
+            ),
+            field(
+              "outtake_reason",
+              "policy_enrollment_outtake_reason",
+              false,
+              "-",
+              ["Enum"],
+              "Reason the enrollment ended.",
+            ),
+            field(
+              "effective_date",
+              "date",
+              true,
+              "-",
+              ["Check"],
+              "Enrollment start date.",
+            ),
+            field(
+              "ended_on",
+              "date",
+              false,
+              "-",
+              ["Check"],
+              "Enrollment end date.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [
+            "policy_id, tenant_id, client_id -> policies.id, policies.tenant_id, policies.client_id ON DELETE CASCADE",
+            "primary_affiliate_id, tenant_id, client_id -> affiliates.id, affiliates.tenant_id, affiliates.client_id ON DELETE RESTRICT",
+          ],
+          constraints: [
+            "policy_enrollments_date_range_check: ended_on is null or >= effective_date",
+            "policy_enrollments_id_tenant_client_unique on id, tenant_id, client_id",
+            "policy_enrollments_policy_id_idx on policy_id",
+            "policy_enrollments_primary_affiliate_id_idx on primary_affiliate_id",
+            "policy_enrollments_client_id_idx on client_id, tenant_id",
+          ],
+          enums: [
+            enumInfo("policy_enrollment_intake_reason", [
+              "initial_load",
+              "new_enrollment",
+              "renewal",
+              "change",
+              "correction",
+            ]),
+            enumInfo("policy_enrollment_outtake_reason", [
+              "change",
+              "terminated",
+              "policy_end",
+              "correction",
+            ]),
+          ],
+        },
+        {
+          name: "policy_enrollment_members",
+          category: "Enrollment",
+          description: "Affiliates covered by a policy enrollment.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Enrollment member identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Unique", "Index"],
+              "Tenant scope.",
+            ),
+            field(
+              "client_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Client scope.",
+            ),
+            field(
+              "enrollment_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Unique"],
+              "Parent enrollment.",
+            ),
+            field(
+              "affiliate_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Unique", "Index"],
+              "Covered affiliate.",
+            ),
+            field(
+              "member_type",
+              "policy_enrollment_member_type",
+              true,
+              "-",
+              ["Enum"],
+              "Enrollment-time relationship snapshot.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+          ],
+          relationships: [
+            "enrollment_id, tenant_id, client_id -> policy_enrollments.id, policy_enrollments.tenant_id, policy_enrollments.client_id ON DELETE CASCADE",
+            "affiliate_id, tenant_id, client_id -> affiliates.id, affiliates.tenant_id, affiliates.client_id ON DELETE RESTRICT",
+          ],
+          constraints: [
+            "policy_enrollment_members_id_tenant_id_unique on id, tenant_id",
+            "policy_enrollment_members_enrollment_affiliate_unique on enrollment_id, affiliate_id",
+            "policy_enrollment_members_affiliate_id_idx on affiliate_id, tenant_id, client_id",
+          ],
+          enums: [
+            enumInfo("policy_enrollment_member_type", [
+              "self",
+              "spouse",
+              "child",
+              "other",
+            ]),
+          ],
+        },
+        {
+          name: "diagnoses",
+          category: "Claims",
+          description:
+            "Diagnosis catalog used by claims and claim submissions.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Diagnosis identifier.",
+            ),
+            field(
+              "code",
+              "varchar(32)",
+              true,
+              "-",
+              ["Unique"],
+              "Diagnosis code.",
+            ),
+            field(
+              "description",
+              "text",
+              true,
+              "-",
+              [],
+              "Diagnosis description.",
+            ),
+            field("is_active", "boolean", true, "true", [], "Active flag."),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [],
+          constraints: ["diagnoses_code_unique on code"],
+          enums: [],
+        },
+        {
+          name: "claims",
+          category: "Claims",
+          description:
+            "Claim case records; claim_number is intentionally globally unique.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Claim identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Unique", "Index"],
+              "Tenant scope derived through enrollment member.",
+            ),
+            field(
+              "claim_number",
+              "text",
+              true,
+              "-",
+              ["Unique"],
+              "Globally unique claim number by design.",
+            ),
+            field(
+              "status",
+              "claim_status",
+              true,
+              "-",
+              ["Enum", "Index"],
+              "Current claim status.",
+            ),
+            field(
+              "enrollment_member_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Covered enrollment member.",
+            ),
+            field(
+              "intake_submitted_at",
+              "timestamp with time zone",
+              false,
+              "-",
+              [],
+              "When intake was submitted.",
+            ),
+            field(
+              "sent_to_insurer_at",
+              "timestamp with time zone",
+              false,
+              "-",
+              ["Index"],
+              "When sent to insurer.",
+            ),
+            field(
+              "event_date",
+              "date",
+              true,
+              "-",
+              ["Index"],
+              "Date of claim event.",
+            ),
+            field(
+              "attention_type",
+              "claim_attention_type",
+              true,
+              "-",
+              ["Enum"],
+              "Type of attention.",
+            ),
+            field(
+              "diagnosis_id",
+              "uuid",
+              false,
+              "-",
+              ["FK", "Index", "Check"],
+              "Optional catalog diagnosis.",
+            ),
+            field(
+              "diagnosis_other_text",
+              "text",
+              false,
+              "-",
+              ["Check"],
+              "Free-text diagnosis when no diagnosis_id.",
+            ),
+            field(
+              "description",
+              "text",
+              false,
+              "-",
+              [],
+              "Claim narrative copied from claim submission when converted.",
+            ),
+            field(
+              "submitted_amount",
+              "numeric(12,2)",
+              true,
+              "-",
+              ["Check"],
+              "Original submitted amount.",
+            ),
+            field(
+              "not_eligible_amount",
+              "numeric(12,2)",
+              true,
+              "0",
+              ["Check"],
+              "Amount not eligible.",
+            ),
+            field(
+              "not_processed_amount",
+              "numeric(12,2)",
+              true,
+              "0",
+              ["Check"],
+              "Amount not processed.",
+            ),
+            field(
+              "copay_amount",
+              "numeric(12,2)",
+              true,
+              "0",
+              ["Check"],
+              "Copay amount.",
+            ),
+            field(
+              "deductible_amount",
+              "numeric(12,2)",
+              true,
+              "0",
+              ["Check"],
+              "Deductible amount.",
+            ),
+            field(
+              "paid_amount",
+              "numeric(12,2)",
+              true,
+              "0",
+              ["Check"],
+              "Paid amount, capped by submitted amount.",
+            ),
+            field(
+              "settlement_number",
+              "text",
+              false,
+              "-",
+              [],
+              "Settlement reference.",
+            ),
+            field(
+              "settlement_date",
+              "date",
+              false,
+              "-",
+              [],
+              "Settlement date.",
+            ),
+            field(
+              "settlement_notes",
+              "text",
+              false,
+              "-",
+              [],
+              "Settlement notes.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [
+            "enrollment_member_id, tenant_id -> policy_enrollment_members.id, policy_enrollment_members.tenant_id ON DELETE RESTRICT",
+            "diagnosis_id -> diagnoses.id ON DELETE RESTRICT",
+          ],
+          constraints: [
+            "claims_claim_number_unique on claim_number (global by intent)",
+            "claims_id_tenant_id_unique on id, tenant_id",
+            "claims_non_negative_amounts_check",
+            "claims_paid_amount_lte_submitted_amount_check",
+            "claims_diagnosis_source_check: diagnosis_id and diagnosis_other_text cannot both be present",
+          ],
+          enums: [
+            enumInfo("claim_status", [
+              "internal_review",
+              "submitted_to_insurer",
+              "pending_information",
+              "not_processed",
+              "settled",
+              "cancelled",
+            ]),
+            enumInfo("claim_attention_type", [
+              "ambulatory",
+              "hospitalary",
+              "emergency",
+              "pharmacy",
+              "dental",
+              "other",
+            ]),
+          ],
+        },
+        {
+          name: "claim_status_history",
+          category: "Claims",
+          description: "Status transition history for claims.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "History row identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Tenant scope.",
+            ),
+            field(
+              "claim_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Claim whose status changed.",
+            ),
+            field(
+              "from_status",
+              "claim_status",
+              false,
+              "-",
+              ["Enum"],
+              "Previous status.",
+            ),
+            field(
+              "to_status",
+              "claim_status",
+              true,
+              "-",
+              ["Enum", "Index"],
+              "New status.",
+            ),
+            field("note", "text", false, "-", [], "Optional note."),
+            field(
+              "changed_by_user_id",
+              "uuid",
+              false,
+              "-",
+              ["FK"],
+              "Actor user in same tenant.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              ["Index"],
+              "Transition timestamp.",
+            ),
+          ],
+          relationships: [
+            "claim_id, tenant_id -> claims.id, claims.tenant_id ON DELETE CASCADE",
+            "changed_by_user_id, tenant_id -> users.id, users.tenant_id ON DELETE SET NULL",
+          ],
+          constraints: [
+            "claim_status_history_tenant_id_idx on tenant_id",
+            "claim_status_history_claim_id_idx on claim_id",
+            "claim_status_history_to_status_idx on to_status",
+            "claim_status_history_created_at_idx on created_at",
+          ],
+          enums: [
+            enumInfo("claim_status", [
+              "internal_review",
+              "submitted_to_insurer",
+              "pending_information",
+              "not_processed",
+              "settled",
+              "cancelled",
+            ]),
+          ],
+        },
+        {
+          name: "claim_invoices",
+          category: "Claims",
+          description: "Invoice line items attached to a claim.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Invoice identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index", "Unique"],
+              "Tenant scope inherited from the parent claim.",
+            ),
+            field(
+              "claim_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index", "Unique"],
+              "Parent claim.",
+            ),
+            field(
+              "invoice_number",
+              "text",
+              true,
+              "-",
+              ["Unique"],
+              "Invoice number unique per claim.",
+            ),
+            field("provider", "text", true, "-", [], "Care provider."),
+            field(
+              "value",
+              "numeric(12,2)",
+              true,
+              "-",
+              ["Check"],
+              "Invoice value.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [
+            "claim_id, tenant_id -> claims.id, claims.tenant_id ON DELETE CASCADE",
+          ],
+          constraints: [
+            "claim_invoices_value_non_negative_check",
+            "claim_invoices_id_tenant_id_unique on id, tenant_id",
+            "claim_invoices_tenant_id_idx on tenant_id",
+            "claim_invoices_claim_id_idx on claim_id",
+            "claim_invoices_claim_invoice_number_unique on claim_id, invoice_number",
+          ],
+          enums: [],
+        },
+        {
+          name: "claim_submissions",
+          category: "Claims",
+          description: "Claim intake submissions that may convert into claims.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "Submission identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Unique", "Index"],
+              "Tenant scope.",
+            ),
+            field(
+              "enrollment_member_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Covered enrollment member.",
+            ),
+            field(
+              "diagnosis_id",
+              "uuid",
+              false,
+              "-",
+              ["FK", "Index", "Check"],
+              "Optional catalog diagnosis.",
+            ),
+            field(
+              "diagnosis_other_text",
+              "text",
+              false,
+              "-",
+              ["Check"],
+              "Required when diagnosis_id is absent.",
+            ),
+            field(
+              "description",
+              "text",
+              false,
+              "-",
+              [],
+              "Submission description.",
+            ),
+            field(
+              "status",
+              "claim_submission_status",
+              true,
+              "submitted",
+              ["Enum", "Index"],
+              "Submission workflow status.",
+            ),
+            field(
+              "submitted_by_user_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Submitting user in same tenant.",
+            ),
+            field(
+              "claim_id",
+              "uuid",
+              false,
+              "-",
+              ["FK", "Unique"],
+              "Converted claim link.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Created timestamp.",
+            ),
+            field(
+              "updated_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              [],
+              "Updated timestamp.",
+            ),
+          ],
+          relationships: [
+            "enrollment_member_id, tenant_id -> policy_enrollment_members.id, policy_enrollment_members.tenant_id ON DELETE RESTRICT",
+            "submitted_by_user_id, tenant_id -> users.id, users.tenant_id",
+            "claim_id, tenant_id -> claims.id, claims.tenant_id ON DELETE SET NULL",
+            "diagnosis_id -> diagnoses.id ON DELETE RESTRICT",
+          ],
+          constraints: [
+            "claim_submissions_diagnosis_presence_check: exactly one diagnosis source is required",
+            "claim_submissions_id_tenant_id_unique on id, tenant_id",
+            "claim_submissions_claim_id_unique on claim_id",
+            "claim_submissions_tenant_id_idx on tenant_id",
+          ],
+          enums: [
+            enumInfo("claim_submission_status", [
+              "submitted",
+              "converted",
+              "not_converted",
+              "cancelled",
+            ]),
+          ],
+        },
+        {
+          name: "claim_submission_history",
+          category: "Claims",
+          description: "Status transition history for claim submissions.",
+          fields: [
+            field(
+              "id",
+              "uuid",
+              true,
+              "randomUUID()",
+              ["PK"],
+              "History row identifier.",
+            ),
+            field(
+              "tenant_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Tenant scope.",
+            ),
+            field(
+              "claim_submission_id",
+              "uuid",
+              true,
+              "-",
+              ["FK", "Index"],
+              "Submission whose status changed.",
+            ),
+            field(
+              "from_status",
+              "claim_submission_status",
+              false,
+              "-",
+              ["Enum"],
+              "Previous status.",
+            ),
+            field(
+              "to_status",
+              "claim_submission_status",
+              true,
+              "-",
+              ["Enum", "Index"],
+              "New status.",
+            ),
+            field("note", "text", false, "-", [], "Optional note."),
+            field(
+              "changed_by_user_id",
+              "uuid",
+              false,
+              "-",
+              ["FK"],
+              "Actor user in same tenant.",
+            ),
+            field(
+              "created_at",
+              "timestamp with time zone",
+              true,
+              "now()",
+              ["Index"],
+              "Transition timestamp.",
+            ),
+          ],
+          relationships: [
+            "claim_submission_id, tenant_id -> claim_submissions.id, claim_submissions.tenant_id ON DELETE CASCADE",
+            "changed_by_user_id, tenant_id -> users.id, users.tenant_id ON DELETE SET NULL",
+          ],
+          constraints: [
+            "claim_submission_history_tenant_id_idx on tenant_id",
+            "claim_submission_history_submission_id_idx on claim_submission_id",
+            "claim_submission_history_to_status_idx on to_status",
+            "claim_submission_history_created_at_idx on created_at",
+          ],
+          enums: [
+            enumInfo("claim_submission_status", [
+              "submitted",
+              "converted",
+              "not_converted",
+              "cancelled",
+            ]),
+          ],
+        },
+      ];
+
+      const state = {
+        activeIndex: 0,
+        keyFieldsOnly: false,
+        search: "",
+      };
+
+      const elements = {
+        tabs: document.getElementById("tableTabs"),
+        tableSearch: document.getElementById("tableSearch"),
+        totalTables: document.getElementById("totalTables"),
+        totalFields: document.getElementById("totalFields"),
+        totalEnums: document.getElementById("totalEnums"),
+        visibleFields: document.getElementById("visibleFields"),
+        tableTitle: document.getElementById("tableTitle"),
+        tableCategory: document.getElementById("tableCategory"),
+        tableDescription: document.getElementById("tableDescription"),
+        tableChips: document.getElementById("tableChips"),
+        prevTable: document.getElementById("prevTable"),
+        nextTable: document.getElementById("nextTable"),
+        keyToggle: document.getElementById("keyToggle"),
+        fieldRows: document.getElementById("fieldRows"),
+        relationshipList: document.getElementById("relationshipList"),
+        constraintList: document.getElementById("constraintList"),
+      };
+
+      function field(name, type, required, defaultValue, tags, note) {
+        return { name, type, required, defaultValue, tags, note };
+      }
+
+      function enumInfo(name, values) {
+        return { name, values };
+      }
+
+      function isKeyField(fieldInfo) {
+        return fieldInfo.tags.some((tag) =>
+          ["PK", "FK", "Unique", "Index"].includes(tag),
+        );
+      }
+
+      function tagClass(tag) {
+        return tag.toLowerCase();
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderTag(tag) {
+        return `<span class="tag ${tagClass(tag)}">${escapeHtml(tag)}</span>`;
+      }
+
+      function getFilteredTables() {
+        const query = state.search.trim().toLowerCase();
+        if (!query) {
+          return schemaTables;
+        }
+
+        return schemaTables.filter((table) => {
+          return (
+            table.name.toLowerCase().includes(query) ||
+            table.category.toLowerCase().includes(query) ||
+            table.description.toLowerCase().includes(query)
+          );
+        });
+      }
+
+      function setActiveTable(index) {
+        state.activeIndex = (index + schemaTables.length) % schemaTables.length;
+        render();
+      }
+
+      function renderTabs() {
+        const filteredTables = getFilteredTables();
+
+        if (filteredTables.length === 0) {
+          elements.tabs.innerHTML =
+            '<div class="empty-state">No tables match that search.</div>';
+          return;
+        }
+
+        elements.tabs.innerHTML = filteredTables
+          .map((table) => {
+            const index = schemaTables.indexOf(table);
+            const active = index === state.activeIndex ? " active" : "";
+            return `
+              <button class="tab${active}" data-table-index="${index}" type="button">
+                <span>
+                  <span class="tab-name">${escapeHtml(table.name)}</span>
+                  <span class="tab-meta">${escapeHtml(table.category)}</span>
+                </span>
+                <span class="count-pill">${table.fields.length}</span>
+              </button>
+            `;
+          })
+          .join("");
+      }
+
+      function renderTable() {
+        const table = schemaTables[state.activeIndex];
+        const visibleFields = state.keyFieldsOnly
+          ? table.fields.filter(isKeyField)
+          : table.fields;
+
+        elements.tableTitle.textContent = table.name;
+        elements.tableCategory.textContent = table.category;
+        elements.tableDescription.textContent = table.description;
+        elements.visibleFields.textContent = String(visibleFields.length);
+
+        elements.tableChips.innerHTML = [
+          `<span class="chip">${table.fields.length} fields</span>`,
+          `<span class="chip">${table.relationships.length} relationships</span>`,
+          `<span class="chip">${table.constraints.length} constraints</span>`,
+          `<span class="chip">${table.enums.length} enums</span>`,
+        ].join("");
+
+        elements.fieldRows.innerHTML = visibleFields
+          .map((fieldInfo) => {
+            const required = fieldInfo.required ? "Required" : "Nullable";
+            const requiredTag = fieldInfo.required
+              ? '<span class="tag required">Required</span>'
+              : '<span class="tag">Nullable</span>';
+            const tags =
+              fieldInfo.tags.length > 0
+                ? fieldInfo.tags.map(renderTag).join("")
+                : '<span class="tag">Plain</span>';
+
+            return `
+              <tr>
+                <td><span class="field-name">${escapeHtml(fieldInfo.name)}</span></td>
+                <td><code>${escapeHtml(fieldInfo.type)}</code></td>
+                <td aria-label="${required}">${requiredTag}</td>
+                <td><code>${escapeHtml(fieldInfo.defaultValue)}</code></td>
+                <td><div class="chips">${tags}</div></td>
+                <td class="field-note small muted">${escapeHtml(fieldInfo.note)}</td>
+              </tr>
+            `;
+          })
+          .join("");
+
+        elements.relationshipList.innerHTML = renderInfoItems(
+          table.relationships,
+          "No direct foreign-key relationships.",
+        );
+        elements.constraintList.innerHTML = renderConstraints(table);
+        elements.keyToggle.classList.toggle("active", state.keyFieldsOnly);
+      }
+
+      function renderInfoItems(items, emptyMessage) {
+        if (items.length === 0) {
+          return `<li class="info-item">${escapeHtml(emptyMessage)}</li>`;
+        }
+
+        return items
+          .map((item) => `<li class="info-item">${escapeHtml(item)}</li>`)
+          .join("");
+      }
+
+      function renderConstraints(table) {
+        const constraintItems = table.constraints.map(
+          (constraint) =>
+            `<li class="info-item"><strong>Constraint</strong>${escapeHtml(constraint)}</li>`,
+        );
+
+        const enumItems = table.enums.map(
+          (enumItem) => `
+            <li class="info-item">
+              <strong>${escapeHtml(enumItem.name)}</strong>
+              ${enumItem.values.map((value) => `<code>${escapeHtml(value)}</code>`).join(" ")}
+            </li>
+          `,
+        );
+
+        const html = [...constraintItems, ...enumItems].join("");
+
+        return html || '<li class="info-item">No notable constraints.</li>';
+      }
+
+      function renderSummary() {
+        const totalFields = schemaTables.reduce(
+          (sum, table) => sum + table.fields.length,
+          0,
+        );
+        const uniqueEnums = new Set(
+          schemaTables.flatMap((table) => table.enums.map((item) => item.name)),
+        );
+
+        elements.totalTables.textContent = String(schemaTables.length);
+        elements.totalFields.textContent = String(totalFields);
+        elements.totalEnums.textContent = String(uniqueEnums.size);
+      }
+
+      function render() {
+        renderSummary();
+        renderTabs();
+        renderTable();
+      }
+
+      elements.tabs.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-table-index]");
+        if (!button) {
+          return;
+        }
+
+        setActiveTable(Number(button.dataset.tableIndex));
+      });
+
+      elements.tableSearch.addEventListener("input", (event) => {
+        state.search = event.target.value;
+        renderTabs();
+      });
+
+      elements.prevTable.addEventListener("click", () => {
+        setActiveTable(state.activeIndex - 1);
+      });
+
+      elements.nextTable.addEventListener("click", () => {
+        setActiveTable(state.activeIndex + 1);
+      });
+
+      elements.keyToggle.addEventListener("click", () => {
+        state.keyFieldsOnly = !state.keyFieldsOnly;
+        renderTable();
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.target instanceof HTMLInputElement) {
+          return;
+        }
+
+        if (event.key === "ArrowLeft") {
+          setActiveTable(state.activeIndex - 1);
+        }
+
+        if (event.key === "ArrowRight") {
+          setActiveTable(state.activeIndex + 1);
+        }
+      });
+
+      render();
+    </script>
+  </body>
+</html>

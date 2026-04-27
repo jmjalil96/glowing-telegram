@@ -1,12 +1,14 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
+  foreignKey,
   index,
   jsonb,
   pgTable,
+  text,
   timestamp,
   uuid,
   varchar,
-  text,
 } from "drizzle-orm/pg-core";
 
 import { tenantsTable, usersTable } from "./auth.js";
@@ -18,9 +20,7 @@ export const auditLogsTable = pgTable(
     tenantId: uuid("tenant_id").references(() => tenantsTable.id, {
       onDelete: "set null",
     }),
-    actorUserId: uuid("actor_user_id").references(() => usersTable.id, {
-      onDelete: "set null",
-    }),
+    actorUserId: uuid("actor_user_id"),
     action: varchar("action", { length: 128 }).notNull(),
     targetType: varchar("target_type", { length: 64 }),
     targetId: uuid("target_id"),
@@ -36,6 +36,15 @@ export const auditLogsTable = pgTable(
       .defaultNow(),
   },
   (table) => [
+    foreignKey({
+      columns: [table.actorUserId, table.tenantId],
+      foreignColumns: [usersTable.id, usersTable.tenantId],
+      name: "audit_logs_actor_user_tenant_fk",
+    }).onDelete("set null"),
+    check(
+      "audit_logs_actor_requires_tenant_check",
+      sql`${table.actorUserId} is null or ${table.tenantId} is not null`,
+    ),
     index("audit_logs_tenant_id_idx").on(table.tenantId),
     index("audit_logs_actor_user_id_idx").on(table.actorUserId),
     index("audit_logs_action_idx").on(table.action),

@@ -83,29 +83,16 @@ export default defineConfig(
     },
   },
   {
-    files: ["apps/web/vite.config.ts"],
+    files: [
+      "apps/web/vite.config.ts",
+      "apps/web/vitest.config.ts",
+      "apps/web/playwright.config.ts",
+    ],
     languageOptions: {
       globals: globals.node,
       parserOptions: {
         projectService: {
           defaultProject: "apps/web/tsconfig.node.json",
-        },
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-    rules: sharedTypeScriptRules,
-  },
-  {
-    files: ["apps/web/vitest.config.ts", "apps/web/playwright.config.ts"],
-    languageOptions: {
-      globals: globals.node,
-      parserOptions: {
-        projectService: {
-          allowDefaultProject: [
-            "apps/web/vitest.config.ts",
-            "apps/web/playwright.config.ts",
-          ],
-          defaultProject: "apps/web/tests/tsconfig.json",
         },
         tsconfigRootDir: import.meta.dirname,
       },

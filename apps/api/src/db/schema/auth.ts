@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -45,7 +46,10 @@ export const usersTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [index("users_tenant_id_idx").on(table.tenantId)],
+  (table) => [
+    index("users_tenant_id_idx").on(table.tenantId),
+    unique("users_id_tenant_id_unique").on(table.id, table.tenantId),
+  ],
 );
 
 export const sessionsTable = pgTable(

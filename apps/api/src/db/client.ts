@@ -13,6 +13,24 @@ import {
   usersTable,
 } from "./schema/auth.js";
 import {
+  claimInvoicesTable,
+  claimSubmissionHistoryTable,
+  claimSubmissionsTable,
+  claimsTable,
+  claimStatusHistoryTable,
+} from "./schema/claims.js";
+import {
+  affiliatesTable,
+  clientUsersTable,
+  clientsTable,
+} from "./schema/clients.js";
+import { diagnosesTable } from "./schema/diagnoses.js";
+import {
+  policyEnrollmentMembersTable,
+  policyEnrollmentsTable,
+} from "./schema/enrollments.js";
+import { insurersTable, policiesTable } from "./schema/policies.js";
+import {
   permissionsTable,
   rolePermissionsTable,
   rolesTable,
@@ -49,8 +67,21 @@ pool.on("error", (error) => {
 export const db = drizzle({
   client: pool,
   schema: {
+    affiliatesTable,
     auditLogsTable,
+    claimInvoicesTable,
+    claimSubmissionHistoryTable,
+    claimSubmissionsTable,
+    claimsTable,
+    claimStatusHistoryTable,
+    clientUsersTable,
+    clientsTable,
+    diagnosesTable,
+    insurersTable,
     permissionsTable,
+    policiesTable,
+    policyEnrollmentMembersTable,
+    policyEnrollmentsTable,
     rolePermissionsTable,
     rolesTable,
     sessionsTable,

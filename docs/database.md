@@ -33,7 +33,21 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/techbros_api
 - `apps/api/src/db/migrations`: generated SQL migrations
 - `apps/api/src/db/migrate.ts`: explicit migration runner
 
-The current schema includes the `users` table.
+The current schema covers the core API domain:
+
+- tenancy and authentication: tenants, users, sessions, user tokens
+- authorization: roles, permissions, user roles, role permissions
+- client administration: clients, client users, affiliates
+- policy administration: insurers, policies, policy enrollments, enrollment
+  members
+- claims: claims, claim invoices, claim submissions, claim status history,
+  submission status history
+- reference and operations data: diagnoses, audit logs
+
+Tenant-owned domain rows carry `tenant_id` and use tenant-scoped foreign keys
+where cross-tenant leakage would be risky. Claims, claim submissions, claim
+history, submission history, and claim invoices all link back to their parent
+records with composite tenant-scoped constraints.
 
 ## Commands
 
@@ -44,6 +58,7 @@ pnpm --filter @techbros/api run db:up
 pnpm --filter @techbros/api run db:down
 pnpm --filter @techbros/api run db:generate
 pnpm --filter @techbros/api run db:migrate
+pnpm --filter @techbros/api run db:seed
 pnpm --filter @techbros/api run db:studio
 ```
 
@@ -73,6 +88,12 @@ Then apply it explicitly:
 pnpm --filter @techbros/api run db:migrate
 ```
 
+Seed local development data when needed:
+
+```sh
+pnpm --filter @techbros/api run db:seed
+```
+
 Open Drizzle Studio when needed:
 
 ```sh
@@ -95,6 +116,13 @@ pnpm --filter @techbros/api run db:down
 - Readiness uses the same connectivity and migration-version check, so `/ready`
   reports unhealthy for unreachable databases, missing migration state, or any
   schema version mismatch.
+- Use `pnpm --filter @techbros/api run db:generate` after schema changes. A
+  clean run reports `No schema changes, nothing to migrate`.
+- Use `pnpm --filter @techbros/api exec drizzle-kit check --config=drizzle.config.ts`
+  to validate migration metadata and ordering.
+- After new migrations are added, run `pnpm --filter @techbros/api run db:migrate`
+  against the configured local database so readiness matches the migration
+  journal.
 - Startup and readiness use fail-fast database connection timeouts. Tune them
   with:
   - `PG_POOL_MAX` default `10`

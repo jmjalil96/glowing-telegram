@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { isDatabaseReady } from "../db/client.js";
+import { isDatabaseReady } from "../platform/database/readiness.js";
 
 export const readinessRouter = Router();
 

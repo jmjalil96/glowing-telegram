@@ -29,11 +29,36 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/techbros_api
 ## Current Layout
 
 - `apps/api/drizzle.config.ts`: Drizzle Kit config
-- `apps/api/src/db/schema`: schema source files
-- `apps/api/src/db/migrations`: generated SQL migrations
-- `apps/api/src/db/migrate.ts`: explicit migration runner
+- `apps/api/src/platform/database/schema`: schema source files
+- `apps/api/src/platform/database/migrations`: generated SQL migrations
+- `apps/api/src/platform/database/migrate.ts`: explicit migration runner
+- `apps/api/src/modules/*/infrastructure`: module-owned persistence adapters
+  that use the centralized schema through platform database clients
 
-The current schema includes the `users` table.
+The current schema covers the core API domain:
+
+- tenancy and authentication: tenants, users, sessions, user tokens
+- authorization: roles, permissions, user roles, role permissions
+- client administration: clients, client users, affiliates
+- policy administration: insurers, policies, policy enrollments, enrollment
+  members
+- claims: claims, tenant-scoped claim number counters, claim invoices, claim
+  submissions, claim status history, submission status history
+- reference and operations data: diagnoses, audit logs
+
+Business ownership for those tables is documented in
+[`backend-module-ownership.md`](./backend-module-ownership.md). Schema files
+remain centralized under `platform/database/schema`; module infrastructure owns
+query behavior and persistence adapters.
+
+Tenant-owned domain rows carry `tenant_id` and use tenant-scoped foreign keys
+where cross-tenant leakage would be risky. Claims, claim submissions, claim
+history, submission history, and claim invoices all link back to their parent
+records with composite tenant-scoped constraints.
+
+Claim numbers are tenant-scoped internal identifiers. Insurer-provided claim
+references should be stored separately on `claims.insurer_claim_number`, because
+external numbers can repeat across tenants, clients, or insurers.
 
 ## Commands
 
@@ -44,6 +69,7 @@ pnpm --filter @techbros/api run db:up
 pnpm --filter @techbros/api run db:down
 pnpm --filter @techbros/api run db:generate
 pnpm --filter @techbros/api run db:migrate
+pnpm --filter @techbros/api run db:seed
 pnpm --filter @techbros/api run db:studio
 ```
 
@@ -73,6 +99,12 @@ Then apply it explicitly:
 pnpm --filter @techbros/api run db:migrate
 ```
 
+Seed local development data when needed:
+
+```sh
+pnpm --filter @techbros/api run db:seed
+```
+
 Open Drizzle Studio when needed:
 
 ```sh
@@ -95,6 +127,13 @@ pnpm --filter @techbros/api run db:down
 - Readiness uses the same connectivity and migration-version check, so `/ready`
   reports unhealthy for unreachable databases, missing migration state, or any
   schema version mismatch.
+- Use `pnpm --filter @techbros/api run db:generate` after schema changes. A
+  clean run reports `No schema changes, nothing to migrate`.
+- Use `pnpm --filter @techbros/api exec drizzle-kit check --config=drizzle.config.ts`
+  to validate migration metadata and ordering.
+- After new migrations are added, run `pnpm --filter @techbros/api run db:migrate`
+  against the configured local database so readiness matches the migration
+  journal.
 - Startup and readiness use fail-fast database connection timeouts. Tune them
   with:
   - `PG_POOL_MAX` default `10`

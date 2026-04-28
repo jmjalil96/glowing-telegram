@@ -11,18 +11,18 @@ import { Pool as PgPool } from "pg";
 import {
   AUTH_PASSWORD_RESET_TOKEN_TYPE,
   authConstants,
-} from "../../src/auth/constants.js";
-import { opaqueTokenService } from "../../src/auth/lib/opaque-token.js";
-import { passwordHasher } from "../../src/auth/lib/password-hasher.js";
+} from "../../src/modules/identity/domain/identity-constants.js";
+import { opaqueTokenService } from "../../src/platform/security/opaque-token.js";
+import { passwordHasher } from "../../src/platform/security/password-hasher.js";
 import {
   sessionsTable,
   tenantsTable,
   userTokensTable,
   usersTable,
-} from "../../src/db/schema/auth.js";
+} from "../../src/platform/database/schema/auth.js";
 
 const migrationsFolder = fileURLToPath(
-  new URL("../../src/db/migrations", import.meta.url),
+  new URL("../../src/platform/database/migrations", import.meta.url),
 );
 
 export interface TestDatabase {

@@ -29,7 +29,7 @@ export const startServerProcess = ({
 }: StartServerProcessOptions): StartedServerProcess => {
   const childProcess = spawn(
     process.execPath,
-    ["--import", "tsx", "src/server.ts"],
+    ["--import", "tsx", "src/main.ts"],
     {
       cwd: apiPackageRoot,
       env: {

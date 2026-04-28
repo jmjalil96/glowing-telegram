@@ -7,21 +7,30 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool as PgPool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { auditLogsTable } from "../../src/db/schema/audit.js";
-import { tenantsTable, usersTable } from "../../src/db/schema/auth.js";
+import { auditLogsTable } from "../../src/platform/database/schema/audit.js";
+import {
+  tenantsTable,
+  usersTable,
+} from "../../src/platform/database/schema/auth.js";
 import {
   claimInvoicesTable,
   claimSubmissionHistoryTable,
   claimSubmissionsTable,
   claimsTable,
   claimStatusHistoryTable,
-} from "../../src/db/schema/claims.js";
-import { affiliatesTable, clientsTable } from "../../src/db/schema/clients.js";
+} from "../../src/platform/database/schema/claims.js";
+import {
+  affiliatesTable,
+  clientsTable,
+} from "../../src/platform/database/schema/clients.js";
 import {
   policyEnrollmentMembersTable,
   policyEnrollmentsTable,
-} from "../../src/db/schema/enrollments.js";
-import { insurersTable, policiesTable } from "../../src/db/schema/policies.js";
+} from "../../src/platform/database/schema/enrollments.js";
+import {
+  insurersTable,
+  policiesTable,
+} from "../../src/platform/database/schema/policies.js";
 import {
   runMigrationsForConnectionString,
   startTestDatabase,
@@ -29,7 +38,7 @@ import {
 } from "../helpers/database.js";
 
 const migrationsFolder = fileURLToPath(
-  new URL("../../src/db/migrations", import.meta.url),
+  new URL("../../src/platform/database/migrations", import.meta.url),
 );
 
 const legacyMigrationFiles = [

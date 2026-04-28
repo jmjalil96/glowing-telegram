@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool as PgPool } from "pg";
 
-import { auditLogsTable } from "../../src/db/schema/audit.js";
+import { auditLogsTable } from "../../src/platform/database/schema/audit.js";
 
 export interface AuditLogRecord {
   id: string;

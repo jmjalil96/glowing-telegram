@@ -5,7 +5,7 @@ The API test stack is:
 - Vitest
 - Testcontainers PostgreSQL
 - Testcontainers Inbucket SMTP/HTTP capture
-- Real child-process server boots with `node --import tsx src/server.ts`
+- Real child-process server boots with `node --import tsx src/main.ts`
 
 The current strategy is integration-first. Most confidence comes from exercising
 the deployed HTTP/process boundary, real PostgreSQL containers, real SMTP
@@ -39,7 +39,7 @@ child Node processes and the subprocess coverage needs to be included too.
 
 ## Current Test Suites
 
-- `tests/smoke/server.process.test.ts`
+- `tests/operations/server.process.test.ts`
   - startup success with a reachable, migrated database
   - startup failure with an unreachable database
   - startup failure with a reachable but schema-mismatched database
@@ -47,44 +47,44 @@ child Node processes and the subprocess coverage needs to be included too.
   - liveness staying healthy during database outages
   - readiness failing during database outages and recovering after restoration
   - graceful shutdown on `SIGTERM`
-- `tests/http/http-contract.process.test.ts`
+- `tests/contracts/http-contract.process.test.ts`
   - versioned route contract
   - stable success/error JSON responses
   - `x-request-id` generation and echo
   - representative login success shape
-- `tests/validation/input-validation.process.test.ts`
+- `tests/contracts/input-validation.process.test.ts`
   - malformed JSON and payload limit handling
   - validation error envelope and details
   - body-field validation semantics
   - externally visible email normalization
-- `tests/auth/auth-session.process.test.ts`
+- `tests/modules/identity/auth-session.process.test.ts`
   - login/session establishment
   - protected-route access
   - logout revocation and cookie clearing
   - expired, revoked, and deactivated-user session behavior
-- `tests/auth/authorization-isolation.process.test.ts`
+- `tests/modules/identity/authorization-isolation.process.test.ts`
   - inactive/unverified account authorization gates
   - per-session logout isolation
   - cross-user and cross-tenant session identity separation
   - password-reset revocation affecting only the target user
-- `tests/workflows/password-reset.process.test.ts`
+- `tests/modules/identity/password-reset.process.test.ts`
   - forgot-password -> email -> reset-password -> login workflow
   - reset-link invalidation and single-use behavior
   - session revocation during password reset
   - unverified-user recovery through reset
-- `tests/consistency/auth-state.process.test.ts`
+- `tests/modules/identity/auth-state.process.test.ts`
   - session and revocation persistence across API restarts
   - immediate read-after-write auth-state consistency
   - reset-token concurrency safety
-- `tests/errors/error-contract.process.test.ts`
+- `tests/contracts/error-contract.process.test.ts`
   - stable error envelope across parser, validation, auth, and internal errors
   - deterministic repeated failures
   - `500 INTERNAL_ERROR` behavior during dependency failures
-- `tests/side-effects/external-side-effects.process.test.ts`
+- `tests/operations/external-side-effects.process.test.ts`
   - reset email delivery contract
   - audit-log side effects for auth flows
   - response-to-audit `requestId` correlation
-- `tests/security/security-resilience.process.test.ts`
+- `tests/operations/security-resilience.process.test.ts`
   - credentialed CORS allow/deny behavior
   - cookie hardening in `test` and `production`
   - minimal intentional security headers
@@ -116,7 +116,5 @@ child Node processes and the subprocess coverage needs to be included too.
   over HTTP, signals, SMTP capture, and dependency failures.
 - Startup and readiness both require PostgreSQL connectivity and the exact
   expected Drizzle migration version for the current build.
-- Current coverage is organized around externally observable contracts:
-  operational, HTTP, validation, auth/session, authorization/isolation,
-  workflow, persistence/consistency, errors, side effects, and
-  security/resilience.
+- Current coverage is organized around architecture-facing suites: contracts,
+  identity module behavior, operations, and cross-domain consistency.

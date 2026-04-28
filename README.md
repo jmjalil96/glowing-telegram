@@ -78,6 +78,15 @@ Run these from the repo root.
 - [`apps/web`](./apps/web): active React + Vite web app
 - [`packages/shared`](./packages/shared): reserved for future shared packages
 
+The API backend is organized as a modular monolith:
+
+- `apps/api/src/main.ts`: process entrypoint
+- `apps/api/src/bootstrap`: app creation, dependency wiring, and shutdown
+- `apps/api/src/platform`: shared infrastructure such as HTTP middleware,
+  config, logger, database, audit, email, and security adapters
+- `apps/api/src/modules`: business modules; `identity` is active today and
+  future domain ownership is documented with module READMEs
+
 ## Operational Endpoints
 
 - `GET /health`: liveness check, returns `200` with `{ "status": "ok" }`
@@ -105,3 +114,5 @@ Run these from the repo root.
 
 - [Database workflow](./docs/database.md)
 - [Testing workflow](./docs/testing.md)
+- [Backend module ownership](./docs/backend-module-ownership.md)
+- [Backend architecture refactor plan](./docs/backend-architecture-refactor-plan.md)

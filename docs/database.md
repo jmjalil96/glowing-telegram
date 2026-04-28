@@ -29,9 +29,11 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/techbros_api
 ## Current Layout
 
 - `apps/api/drizzle.config.ts`: Drizzle Kit config
-- `apps/api/src/db/schema`: schema source files
-- `apps/api/src/db/migrations`: generated SQL migrations
-- `apps/api/src/db/migrate.ts`: explicit migration runner
+- `apps/api/src/platform/database/schema`: schema source files
+- `apps/api/src/platform/database/migrations`: generated SQL migrations
+- `apps/api/src/platform/database/migrate.ts`: explicit migration runner
+- `apps/api/src/modules/*/infrastructure`: module-owned persistence adapters
+  that use the centralized schema through platform database clients
 
 The current schema covers the core API domain:
 
@@ -43,6 +45,11 @@ The current schema covers the core API domain:
 - claims: claims, tenant-scoped claim number counters, claim invoices, claim
   submissions, claim status history, submission status history
 - reference and operations data: diagnoses, audit logs
+
+Business ownership for those tables is documented in
+[`backend-module-ownership.md`](./backend-module-ownership.md). Schema files
+remain centralized under `platform/database/schema`; module infrastructure owns
+query behavior and persistence adapters.
 
 Tenant-owned domain rows carry `tenant_id` and use tenant-scoped foreign keys
 where cross-tenant leakage would be risky. Claims, claim submissions, claim

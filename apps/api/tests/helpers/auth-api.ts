@@ -1,4 +1,4 @@
-import { authConstants } from "../../src/auth/constants.js";
+import { authConstants } from "../../src/modules/identity/domain/identity-constants.js";
 
 const jsonContentType = "application/json";
 

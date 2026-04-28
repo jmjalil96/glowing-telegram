@@ -2,7 +2,7 @@ import dotenvFlow from "dotenv-flow";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-const packageRoot = fileURLToPath(new URL("../../", import.meta.url));
+const packageRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const defaultDevelopmentCorsOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
